@@ -302,24 +302,24 @@ def main():
             except Exception as ex:
                 st.error(f"Error during training: {ex}")
 
-    # ========== 6) Prediction ==========
-    st.sidebar.header("6. Prediction")
-    if st.sidebar.button("Make Predictions", key="predict_btn"):
+    # ========== 6) Прогноз ==========
+    st.sidebar.header("6. Прогноз")
+    if st.sidebar.button("Сделать прогноз", key="predict_btn"):
         predictor = st.session_state.get("predictor")
         if predictor is None:
-            st.warning("Please train a model first or load an existing one!")
+            st.warning("Сначала обучите модель или загрузите уже существующую!")
         elif tgt_col == "<нет>":
-            st.error("Please select Target Column in Column Configuration!")
+            st.error("Пожалуйста, выберите целевую колонку в разделе '2. Настройка колонок'!")
         else:
             df_predict = st.session_state.get("df_predict")
 
 
-            if df_predict is None: # df_predict is now required
+            if df_predict is None: # df_predict теперь обязателен
                 st.error("Prediction data is required. Please upload Prediction Data file.")
             else:
                 try:
 
-                    st.subheader("Predictions on Prediction Data")
+                    st.subheader("Прогноз на Prediction Data")
                     df_pred = df_predict.copy()
 
 
@@ -335,19 +335,26 @@ def main():
                     predictions = predict_tabular(predictor, df_pred)
                     st.session_state["predictions"] = predictions
 
-                    st.subheader("Predicted Values (First Rows)")
-                    # Объединяем Prediction Data с предсказаниями
-                    output_df = pd.concat([df_predict.reset_index(drop=True), predictions.reset_index(drop=True)], axis=1)
+                    st.subheader("Предсказанные значения (первые строки)")
+                    # Объединяем Prediction Data с **только колонкой предсказаний**
+                    prediction_col_name = predictions.columns[0] # Предполагаем, что колонка предсказаний - первая (и единственная)
+                    output_df = pd.concat([df_predict.reset_index(drop=True), predictions.reset_index(drop=True)[[prediction_col_name]]], axis=1) # Concatenate only prediction column
                     st.dataframe(output_df.head()) # Display combined dataframe
+
+                    # Feature Importance после прогноза, если есть
+                    feature_importance = st.session_state.get("feature_importance")
+                    if feature_importance is not None:
+                        with st.expander("Feature Importance (Сохраненная)"): # Выводим сохраненную feature importance после прогноза
+                            st.dataframe(feature_importance)
 
 
                     best_name = st.session_state.get("best_model_name", None)
                     best_score = st.session_state.get("best_model_score", None)
                     if best_name is not None:
-                        st.info(f"Best model during training: {best_name}, score_val={best_score:.4f}")
+                        st.info(f"Лучшая модель при обучении была: {best_name}, score_val={best_score:.4f}")
 
                 except Exception as ex:
-                    st.error(f"Prediction Error: {ex}")
+                    st.error(f"Ошибка прогноза: {ex}")
 
     # ========== 7) Save Results (Excel) ==========
     st.sidebar.header("7. Save Results")

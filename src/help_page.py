@@ -1,75 +1,75 @@
 import streamlit as st
 
 def show_help_page():
-    st.title("Help Page")
+    st.title("Страница помощи")
     st.markdown("""
-## About this App
+## О приложении
 
-This Streamlit application uses AutoGluon-Tabular to train and deploy machine learning models for tabular data prediction.
-It allows you to easily upload your datasets, configure training parameters, train models, and make predictions without writing code.
+Это Streamlit-приложение использует AutoGluon-Tabular для обучения и развертывания моделей машинного обучения для прогнозирования табличных данных.
+Оно позволяет вам легко загружать наборы данных, настраивать параметры обучения, обучать модели и делать прогнозы без написания кода.
 
-## Navigation
+## Навигация
 
-- **Главная (Main):**  The main interface for uploading data, configuring training, training models, making predictions, and downloading results.
-- **Help:** This page, providing information and guidance on using the application.
+- **Главная:** Основной интерфейс для загрузки данных, настройки обучения, обучения моделей, создания прогнозов и загрузки результатов.
+- **Help:** Эта страница, предоставляющая информацию и руководство по использованию приложения.
 
-## Steps to Use the App
+## Шаги для использования приложения
 
-1.  **Upload Data:**
-    -   **Train Data (Required):** Upload your training dataset in CSV, XLS, or XLSX format. This dataset will be used to train the AutoGluon model.
-    -   **Prediction Data (Required):**  Upload a separate dataset for making predictions. Predictions will be generated for this dataset, with the assumption that the target column may be missing or empty.
+1.  **Загрузка данных:**
+    -   **Train Data (Обязательно):** Загрузите свой обучающий набор данных в формате CSV, XLS или XLSX. Этот набор данных будет использоваться для обучения модели AutoGluon.
+    -   **Prediction Data (Обязательно):** Загрузите отдельный набор данных для создания прогнозов после обучения. Прогнозы будут сгенерированы для этого набора данных, предполагая, что целевая колонка может отсутствовать или быть пустой.
 
-2.  **Column Configuration:**
-    -   **Target Column:** Select the column in your **Train Data** that you want to predict. This is the dependent variable.
-    -   **Problem Type:** Choose the type of prediction task:
-        -   **auto:** AutoGluon automatically infers the problem type (classification or regression).
-        -   **binary:** Binary classification (two classes).
-        -   **multiclass:** Multiclass classification (more than two classes).
-        -   **regression:** Regression (predicting a continuous numerical value).
-    -   **Evaluation Metric:** Select the metric to optimize for during training. 'auto' uses AutoGluon's default choice.
+2.  **Настройка колонок:**
+    -   **Целевая колонка (Target):** Выберите колонку в вашем **Train Data**, которую вы хотите предсказать. Это зависимая переменная.
+    -   **Тип задачи:** Выберите тип задачи прогнозирования:
+        -   **auto:** AutoGluon автоматически определяет тип задачи (классификация или регрессия).
+        -   **binary:** Бинарная классификация (два класса).
+        -   **multiclass:** Мультиклассовая классификация (более двух классов).
+        -   **regression:** Регрессия (прогнозирование непрерывного числового значения).
+    -   **Метрика оценки:** Выберите метрику для оптимизации во время обучения. 'auto' использует выбор по умолчанию AutoGluon.
 
-3.  **Missing Value Handling:**
-    -   **Missing Value Fill Method:** Choose how to handle missing values in your datasets:
-        -   **None:** Leave missing values as they are (not recommended unless your data has no missing values or models can handle them).
-        -   **Constant=0:** Fill missing values with 0.
-        -   **Mean:** Fill missing values with the mean of the column.
-        -   **Median:** Fill missing values with the median of the column.
-        -   **Mode:** Fill missing values with the mode (most frequent value) of the column.
+3.  **Обработка пропусков:**
+    -   **Метод заполнения пропусков:** Выберите, как обрабатывать пропущенные значения в ваших наборах данных:
+        -   **Нет:** Оставить пропущенные значения как есть (не рекомендуется, если в ваших данных есть пропуски или модели не могут их обрабатывать).
+        -   **Константой (0):** Заполнить пропущенные значения нулями.
+        -   **Средним:** Заполнить пропущенные значения средним значением по столбцу.
+        -   **Медианой:** Заполнить пропущенные значения медианой по столбцу.
+        -   **Модой:** Заполнить пропущенные значения модой (наиболее часто встречающимся значением) по столбцу.
 
-4.  **Model & Training Settings:**
-    -   **AutoGluon Models:** Select specific AutoGluon models to include in training, or choose '* (all)' to train all available models.
-    -   **Presets:** Choose a preset configuration for training speed and quality:
-        -   **fast_training:** Fastest training time, lowest accuracy.
-        -   **medium_quality:**  Fast training time, ideal for initial prototyping.
-        -   **high_quality:** Strong accuracy with fast inference speed.
-        -   **best_quality:** Maximize accuracy, may increase training time.
-    -   **Training Time Limit (seconds):** Specify the maximum time (in seconds) to spend training the model.
+4.  **Модели и настройки обучения:**
+    -   **Модели AutoGluon:** Выберите конкретные модели AutoGluon для включения в обучение или выберите '* (все)', чтобы обучить все доступные модели.
+    -   **Пресеты:** Выберите предустановленную конфигурацию для скорости и качества обучения:
+        -   **fast_training:** Самое быстрое время обучения, наименьшая точность.
+        -   **medium_quality:** Быстрое время обучения, идеально подходит для начального прототипирования.
+        -   **high_quality:** Высокая точность с быстрой скоростью inference.
+        -   **best_quality:** Максимальная точность, может увеличить время обучения.
+    -   **Лимит времени обучения (секунды):** Укажите максимальное время (в секундах), затрачиваемое на обучение модели.
 
-5.  **Train Model:**
-    -   Click the "Train Model" button to start the AutoGluon training process with the configured settings.
+5.  **Обучить модель:**
+    -   Нажмите кнопку "Обучить модель", чтобы запустить процесс обучения AutoGluon с настроенными параметрами.
 
-6.  **Prediction:**
-    -   Once the model is trained, click the "Make Predictions" button to generate predictions on the **Prediction Data** file you uploaded.
+6.  **Прогноз:**
+    -   После обучения модели нажмите кнопку "Сделать прогноз", чтобы сгенерировать прогнозы на основе загруженного вами файла **Prediction Data**.
 
-7.  **Save Results:**
-    -   **Excel File Name:** Enter the desired name for the Excel file to save the results.
-    -   Click "Save Results to Excel" to download an Excel file containing:
-        -   **Prediction Results:**  Your uploaded Prediction Data file, now with an additional column containing the predicted values for the Target Column.
-        -   Leaderboard of trained models
-        -   Feature Importance: Table showing the importance of each feature in the model.
+7.  **Сохранить результаты:**
+    -   **Имя Excel-файла:** Введите желаемое имя для Excel-файла для сохранения результатов.
+    -   Нажмите "Сохранить результаты в Excel", чтобы загрузить Excel-файл, содержащий:
+        -   **Результаты прогнозирования:** Ваш загруженный файл Prediction Data, теперь с дополнительным столбцом, содержащим предсказанные значения для целевой колонки.
+        -   Лидерборд обученных моделей
+        -   Feature Importance: Таблица, показывающая важность каждой функции в модели.
 
-8.  **Application Logs:**
-    -   Click "Show Logs" to view the application logs for debugging or monitoring.
+8.  **Логи приложения:**
+    -   Нажмите "Показать логи", чтобы просмотреть логи приложения для отладки или мониторинга.
 
-9.  **Download Models & Logs:**
-    -   Click "Download AutogluonModels Content" to download a ZIP archive containing the trained AutoGluon models and application logs. This is useful for deploying or archiving your trained model.
+9.  **Скачать все содержимое AutogluonModels:**
+    -   Нажмите "Скачать все содержимое AutogluonModels", чтобы загрузить ZIP-архив, содержащий обученные модели AutoGluon и логи приложения. Это полезно для развертывания или архивирования вашей обученной модели.
 
-## Important Notes
+## Важные заметки
 
--   **Data Requirements:** Ensure your data is in a tabular format (CSV, XLS, XLSX) and that you select the correct column configurations. **Prediction Data file is now required for making predictions.**
--   **Training Time:** Training time can vary significantly based on dataset size, complexity, and the chosen time limit and presets.
--   **Model Performance:** Model performance depends on the quality and characteristics of your data and the chosen training settings. Review the Leaderboard and Feature Importance to understand model behavior.
--   **File Paths:** Be aware of file paths when downloading models and logs.
+-   **Требования к данным:** Убедитесь, что ваши данные имеют табличный формат (CSV, XLS, XLSX) и что вы выбрали правильные конфигурации столбцов. **Файл Prediction Data теперь обязателен для создания прогнозов.**
+-   **Время обучения:** Время обучения может значительно варьироваться в зависимости от размера набора данных, сложности и выбранного лимита времени и пресетов.
+-   **Производительность модели:** Производительность модели зависит от качества и характеристик ваших данных и выбранных настроек обучения. Просмотрите Leaderboard и Feature Importance, чтобы понять поведение модели.
+-   **Пути к файлам:** Помните о путях к файлам при загрузке моделей и логов.
 
-For any issues or further questions, please refer to the AutoGluon documentation or community support.
+По любым вопросам или проблемам, пожалуйста, обратитесь к документации AutoGluon или в службу поддержки сообщества.
     """)

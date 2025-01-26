@@ -3,14 +3,16 @@ import pandas as pd
 
 def predict_tabular(predictor: TabularPredictor, data: pd.DataFrame) -> pd.DataFrame:
     """
-    Makes predictions using a trained TabularPredictor.
+    Делает прогнозы, используя обученный TabularPredictor.
 
-    Args:
-        predictor: Trained TabularPredictor object.
-        data: Pandas DataFrame for prediction.
+    Аргументы:
+        predictor: Обученный объект TabularPredictor.
+        data: Pandas DataFrame для прогнозирования.
 
-    Returns:
-        Pandas DataFrame with predictions.
+    Возвращает:
+        Pandas DataFrame с предсказаниями.
     """
     predictions = predictor.predict(data)
+    if isinstance(predictions, pd.Series): # <---- Проверка на Series
+        predictions = predictions.to_frame(name='prediction') # Преобразуем Series в DataFrame с именем 'prediction'
     return predictions
