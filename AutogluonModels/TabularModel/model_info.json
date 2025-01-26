@@ -1,0 +1,11 @@
+{
+  "tgt_col": "survived",
+  "problem_type": "auto",
+  "eval_metric": null,
+  "fill_method_val": "None",
+  "group_cols_fill_val": [],
+  "presets": "medium_quality",
+  "chosen_models": [
+    "* (all)"
+  ]
+}

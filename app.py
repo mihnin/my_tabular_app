@@ -131,6 +131,8 @@ def main():
         st.session_state["predictions"] = None
     if "fit_summary" not in st.session_state:
         st.session_state["fit_summary"] = None
+    if "feature_importance" not in st.session_state: # для feature importance
+        st.session_state["feature_importance"] = None
 
     if "best_model_name" not in st.session_state:
         st.session_state["best_model_name"] = None
@@ -140,11 +142,13 @@ def main():
     # ========== 1) Data Upload ==========
     st.sidebar.header("1. Upload Data")
     train_file = st.sidebar.file_uploader("Train Data (Required)", type=["csv", "xls", "xlsx"], key="train_file_uploader")
-    predict_file = st.sidebar.file_uploader("Prediction Data (Optional)", type=["csv", "xls", "xlsx"], key="predict_file_uploader")
+    predict_file = st.sidebar.file_uploader("Prediction Data (Required)", type=["csv", "xls", "xlsx"], key="predict_file_uploader") # Required now
 
     if st.sidebar.button("Load Data", key="load_data_btn"):
         if not train_file:
             st.error("Train file is required!")
+        elif not predict_file: # Check for predict_file too
+            st.error("Prediction file is required!")
         else:
             try:
                 df_train = load_data(train_file)
@@ -155,14 +159,14 @@ def main():
                 st.subheader("Train Data Statistics")
                 show_dataset_stats(df_train)
 
-                if predict_file:
-                    df_predict = load_data(predict_file)
-                    st.session_state["df_predict"] = df_predict
-                    st.success("Prediction file loaded successfully!")
-                    st.dataframe(df_predict.head())
-                else:
-                    st.session_state["df_predict"] = None
-                    st.info("Prediction data not loaded.")
+                df_predict = load_data(predict_file) # Prediction data is required now
+                st.session_state["df_predict"] = df_predict
+                st.success("Prediction file loaded successfully!")
+                st.dataframe(df_predict.head())
+
+                st.subheader("Prediction Data Statistics")
+                show_dataset_stats(df_predict)
+
             except Exception as e:
                 st.error(f"Error loading data: {e}")
 
@@ -282,6 +286,13 @@ def main():
                 with st.expander("Fit Summary"):
                     st.text(summ)
 
+                # Feature Importance
+                feature_importance = predictor.feature_importance(df2) # Train data used for feature importance
+                st.session_state["feature_importance"] = feature_importance
+                st.subheader("Feature Importance")
+                st.dataframe(feature_importance)
+
+
                 save_model_metadata(
                     tgt_col, problem_type_val, eval_key,
                     fill_method_val, group_cols_val, # Group cols removed from UI
@@ -301,34 +312,34 @@ def main():
             st.error("Please select Target Column in Column Configuration!")
         else:
             df_predict = st.session_state.get("df_predict")
-            df_train = st.session_state.get("df")
 
-            if df_train is None and df_predict is None:
-                st.error("No train or prediction data available!")
+
+            if df_predict is None: # df_predict is now required
+                st.error("Prediction data is required. Please upload Prediction Data file.")
             else:
                 try:
-                    if df_predict is not None:
-                        st.subheader("Predictions on Prediction Data")
-                        df_pred = df_predict.copy()
-                    else:
-                        st.subheader("Predictions on Train Data (as Prediction Data not loaded)")
-                        df_pred = df_train.copy()
+
+                    st.subheader("Predictions on Prediction Data")
+                    df_pred = df_predict.copy()
+
 
                     df_pred = fill_missing_values(
                         df_pred,
                         st.session_state.get("fill_method_key", "None")
                     )
 
-                    if df_predict is not None:
-                        st.session_state["df_predict"] = df_pred
-                    else:
-                        st.session_state["df"] = df_pred
+
+                    st.session_state["df_predict"] = df_pred
+
 
                     predictions = predict_tabular(predictor, df_pred)
                     st.session_state["predictions"] = predictions
 
                     st.subheader("Predicted Values (First Rows)")
-                    st.dataframe(predictions.head())
+                    # Объединяем Prediction Data с предсказаниями
+                    output_df = pd.concat([df_predict.reset_index(drop=True), predictions.reset_index(drop=True)], axis=1)
+                    st.dataframe(output_df.head()) # Display combined dataframe
+
 
                     best_name = st.session_state.get("best_model_name", None)
                     best_score = st.session_state.get("best_model_score", None)
@@ -343,23 +354,24 @@ def main():
     save_path = st.sidebar.text_input("Excel File Name", "results.xlsx", key="save_path_key")
     if st.sidebar.button("Save Results to Excel", key="save_btn"):
         try:
-            df_train = st.session_state.get("df")
-            df_predict = st.session_state.get("df_predict")
+            df_predict = st.session_state.get("df_predict") # Only df_predict now
             lb = st.session_state.get("leaderboard")
             preds = st.session_state.get("predictions")
+            feature_importance = st.session_state.get("feature_importance") # Feature importance
 
             import openpyxl
             from openpyxl.utils import get_column_letter
 
             with pd.ExcelWriter(save_path, engine="openpyxl") as writer:
-                if df_train is not None:
-                    df_train.to_excel(writer, sheet_name="TrainData", index=False)
-                if df_predict is not None:
-                    df_predict.to_excel(writer, sheet_name="PredictionData", index=False)
+
+                if df_predict is not None: # Save df_predict with predictions
+                    output_df = pd.concat([df_predict.reset_index(drop=True), preds.reset_index(drop=True)], axis=1)
+                    output_df.to_excel(writer, sheet_name="PredictionResults", index=False)
                 if lb is not None:
                     lb.to_excel(writer, sheet_name="Leaderboard", index=False)
-                if preds is not None:
-                    preds.to_excel(writer, sheet_name="Predictions", index=False)
+                if feature_importance is not None: # Save feature importance
+                    feature_importance.to_excel(writer, sheet_name="FeatureImportance", index=True)
+
 
                 if lb is not None and not lb.empty:
                     workbook = writer.book
