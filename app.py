@@ -10,7 +10,6 @@ import json
 from autogluon.tabular import TabularPredictor
 from openpyxl.styles import PatternFill
 
-# Импорт функций обработки данных, инженерии признаков и прогнозирования
 from src.data.data_processing import (
     load_data,
     show_dataset_stats
@@ -31,7 +30,6 @@ CONFIG_PATH = "config/config.yaml"
 MODEL_DIR = "AutogluonModels/TabularModel"
 MODEL_INFO_FILE = "model_info.json"
 
-
 def load_config(path: str):
     """Загружает YAML конфигурацию (METRICS_DICT, AG_MODELS)."""
     if not os.path.exists(path):
@@ -43,12 +41,10 @@ def load_config(path: str):
     presets_list = data.get("presets_list", []) # Добавлен список пресетов из конфигурации
     return metrics_dict, ag_models, presets_list
 
-
 METRICS_DICT, AG_MODELS, PRESETS_LIST = load_config(CONFIG_PATH)
 
-
 def save_model_metadata(tgt_col, problem_type, eval_metric, fill_method_val, group_cols_fill_val,
-                       presets, chosen_models):
+                        presets, chosen_models):
     """Сохраняет все настройки (колонки, тип задачи, метрика и т.д.) в JSON."""
     os.makedirs(MODEL_DIR, exist_ok=True)
     info_dict = {
@@ -64,7 +60,6 @@ def save_model_metadata(tgt_col, problem_type, eval_metric, fill_method_val, gro
     with open(path_json, "w", encoding="utf-8") as f:
         json.dump(info_dict, f, ensure_ascii=False, indent=2)
 
-
 def load_model_metadata():
     """Загружает сохраненные настройки из model_info.json, если доступно."""
     path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
@@ -76,7 +71,6 @@ def load_model_metadata():
         return info
     except:
         return None
-
 
 def try_load_existing_model():
     """Загружает предварительно обученный TabularPredictor, если доступен в MODEL_DIR."""
@@ -100,6 +94,51 @@ def try_load_existing_model():
             st.info("Настройки (колонки, тип задачи, метрика и т.д.) восстановлены из model_info.json")
     except Exception as e:
         st.warning(f"Не удалось автоматически загрузить модель из {MODEL_DIR}. Ошибка: {e}")
+
+def display_fit_summary(fit_summary):
+    """Отображает резюме обучения в структурированном виде."""
+    if fit_summary is None:
+        st.warning("Резюме обучения отсутствует.")
+        return
+
+    st.subheader("Общая информация")
+    st.write(f"- Тип проблемы: {fit_summary.get('problem_type', 'Н/Д')}")
+    st.write(f"- Метрика оценки: {fit_summary.get('eval_metric', 'Н/Д')}")
+    st.write(f"- Лучшая модель: {fit_summary.get('model_best', 'Н/Д')}")
+    st.write(f"- Количество классов: {fit_summary.get('num_classes', 'Н/Д')}")
+    st.write(f"- Количество фолдов для бэггинга: {fit_summary.get('num_bag_folds', 'Н/Д')}")
+    st.write(f"- Максимальный уровень стекинга: {fit_summary.get('max_stack_level', 'Н/Д')}")
+
+    st.subheader("Производительность моделей")
+    model_performance = fit_summary.get('model_performance', {})
+    if model_performance:
+        df_performance = pd.DataFrame.from_dict(model_performance, orient='index', columns=['Score'])
+        st.dataframe(df_performance.sort_values(by='Score', ascending=False))
+    else:
+        st.write("Информация о производительности моделей отсутствует.")
+
+    st.subheader("Время обучения моделей")
+    model_fit_times = fit_summary.get('model_fit_times', {})
+    if model_fit_times:
+        df_fit_times = pd.DataFrame.from_dict(model_fit_times, orient='index', columns=['Время обучения (сек)'])
+        st.dataframe(df_fit_times.sort_values(by='Время обучения (сек)', ascending=True))
+    else:
+        st.write("Информация о времени обучения моделей отсутствует.")
+
+    st.subheader("Время прогнозирования моделей")
+    model_pred_times = fit_summary.get('model_pred_times', {})
+    if model_pred_times:
+        df_pred_times = pd.DataFrame.from_dict(model_pred_times, orient='index', columns=['Время прогнозирования (сек)'])
+        st.dataframe(df_pred_times.sort_values(by='Время прогнозирования (сек)', ascending=True))
+    else:
+        st.write("Информация о времени прогнозирования моделей отсутствует.")
+
+    st.subheader("Гиперпараметры моделей")
+    model_hyperparams = fit_summary.get('model_hyperparams', {})
+    if model_hyperparams:
+        st.json(model_hyperparams) # Отображение гиперпараметров в виде JSON, можно улучшить форматирование при необходимости
+    else:
+        st.write("Информация о гиперпараметрах моделей отсутствует.")
 
 
 def main():
@@ -218,6 +257,7 @@ def main():
 
     # ========== 5) Обучение модели ==========
     st.sidebar.header("5. Обучение модели")
+    auto_predict_save = st.sidebar.checkbox("Прогноз и сохранение после обучения", value=False, key="auto_predict_save_checkbox") # Чекбокс для авто прогноза и сохранения
     if st.sidebar.button("Обучить модель", key="fit_model_btn"):
         df_train = st.session_state.get("df")
         if df_train is None:
@@ -284,7 +324,7 @@ def main():
                     st.info(f"Лучшая модель: {best_model}, score_val={best_score:.4f}")
 
                 with st.expander("Резюме обучения"):
-                    st.text(summ)
+                    display_fit_summary(summ) # Используем улучшенное отображение резюме
 
                 # Важность признаков
                 feature_importance = predictor.feature_importance(df2) # Данные обучения используются для важности признаков
@@ -298,6 +338,83 @@ def main():
                     fill_method_val, group_cols_val, # Групповые колонки удалены из интерфейса
                     presets_val, chosen_models_val
                 )
+                if auto_predict_save: # Автоматический запуск прогноза и сохранения если чекбокс выбран
+                    st.info("Автоматически запускаем прогноз и сохранение результатов...")
+                    # Запускаем прогноз
+                    predictor = st.session_state.get("predictor")
+                    df_predict = st.session_state.get("df_predict")
+
+                    if predictor is not None and df_predict is not None:
+                        try:
+                            st.subheader("Прогноз на данных для прогнозирования")
+                            df_pred = df_predict.copy()
+                            df_pred = fill_missing_values(
+                                df_pred,
+                                st.session_state.get("fill_method_key", "None")
+                            )
+                            st.session_state["df_predict"] = df_pred
+                            predictions = predict_tabular(predictor, df_pred)
+                            st.session_state["predictions"] = predictions
+
+                            st.subheader("Предсказанные значения (первые строки)")
+                            # Обработка случая, когда predictions является Series
+                            if isinstance(predictions, pd.Series):
+                                prediction_col_name = 'prediction'  # Даем столбцу предсказаний имя по умолчанию
+                                predictions = predictions.to_frame(name=prediction_col_name) # Преобразуем Series в DataFrame
+                            else: # predictions это DataFrame
+                                prediction_col_name = predictions.columns[0] # Предполагаем, что колонка предсказаний - первая (и единственная)
+                            # Объединяем данные для прогнозирования с **только колонкой предсказаний**
+                            output_df = pd.concat([df_predict.reset_index(drop=True), predictions.reset_index(drop=True)[[prediction_col_name]]], axis=1) # Объединяем только колонку предсказаний
+                            st.dataframe(output_df.head())
+
+
+                        except Exception as ex_pred:
+                            st.error(f"Ошибка прогноза при автоматическом запуске: {ex_pred}")
+                        else: # Если прогноз успешен, запускаем сохранение
+                            try:
+                                save_path = st.session_state.get("save_path_key", "results.xlsx")
+                                df_predict_to_save = st.session_state.get("df_predict") # Только df_predict теперь
+                                lb_to_save = st.session_state.get("leaderboard")
+                                preds_to_save = st.session_state.get("predictions")
+                                feature_importance_to_save = st.session_state.get("feature_importance") # Важность признаков
+
+                                import openpyxl
+                                from openpyxl.utils import get_column_letter
+
+                                with pd.ExcelWriter(save_path, engine="openpyxl") as writer:
+
+                                    if df_predict_to_save is not None: # Сохранение df_predict с предсказаниями
+                                        output_df_save = pd.concat([df_predict_to_save.reset_index(drop=True), preds_to_save.reset_index(drop=True)], axis=1)
+                                        output_df_save.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
+                                    if lb_to_save is not None:
+                                        lb_to_save.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
+                                    if feature_importance_to_save is not None: # Сохранение важности признаков
+                                        feature_importance_to_save.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
+
+
+                                    if lb_to_save is not None and not lb_to_save.empty:
+                                        workbook = writer.book
+                                        sheet = writer.sheets["ТаблицаЛидеров"]
+                                        best_idx = lb_to_save.iloc[0].name
+                                        best_model_name = lb_to_save.iloc[0]["model"]
+                                        best_score = lb_to_save.iloc[0]["score_val"]
+
+                                        fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                                        row_excel = best_idx + 2
+                                        for col_idx in range(1, lb_to_save.shape[1] + 1):
+                                            cell = sheet.cell(row=row_excel, column=col_idx)
+                                            cell.fill = fill_green
+
+                                        explanation_row = lb_to_save.shape[0] + 3
+                                        explanation = (
+                                            f"Лучшая модель: {best_model_name}\n"
+                                            f"Причина: минимальный score_val = {best_score:.4f}"
+                                        )
+                                        sheet.cell(row=explanation_row, column=1).value = explanation
+
+                                st.success(f"Результаты автоматически сохранены в {save_path}")
+                            except Exception as ex_save:
+                                st.error(f"Ошибка сохранения результатов при автоматическом запуске: {ex_save}")
 
             except Exception as ex:
                 st.error(f"Ошибка во время обучения: {ex}")
@@ -336,8 +453,13 @@ def main():
                     st.session_state["predictions"] = predictions
 
                     st.subheader("Предсказанные значения (первые строки)")
+                    # Обработка случая, когда predictions является Series
+                    if isinstance(predictions, pd.Series):
+                        prediction_col_name = 'prediction'  # Даем столбцу предсказаний имя по умолчанию
+                        predictions = predictions.to_frame(name=prediction_col_name) # Преобразуем Series в DataFrame
+                    else: # predictions это DataFrame
+                        prediction_col_name = predictions.columns[0] # Предполагаем, что колонка предсказаний - первая (и единственная)
                     # Объединяем данные для прогнозирования с **только колонкой предсказаний**
-                    prediction_col_name = predictions.columns[0] # Предполагаем, что колонка предсказаний - первая (и единственная)
                     output_df = pd.concat([df_predict.reset_index(drop=True), predictions.reset_index(drop=True)[[prediction_col_name]]], axis=1) # Объединяем только колонку предсказаний
                     st.dataframe(output_df.head()) # Отображаем объединенный датафрейм
 
@@ -435,7 +557,6 @@ def main():
                 mime="application/zip"
             )
             st.info("Содержимое папки AutogluonModels архивировано.")
-
 
 if __name__ == "__main__":
     main()

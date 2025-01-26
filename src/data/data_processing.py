@@ -21,7 +21,7 @@ def load_data(uploaded_file: st.runtime.uploaded_file_manager.UploadedFile) -> p
                 df = pd.read_excel(uploaded_file)
         else:
             raise ValueError(f"Неподдерживаемый формат файла: {file_ext}")
-
+   
         if df.empty: # <---- Добавлена проверка на пустой DataFrame
             logging.warning(f"Файл {uploaded_file.name} загружен, но DataFrame оказался пустым.")
             raise ValueError(f"Файл '{uploaded_file.name}' загружен, но не содержит данных или данные не распознаны. Проверьте содержимое файла.")
