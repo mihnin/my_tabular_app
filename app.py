@@ -12,6 +12,7 @@ import zipfile
 from autogluon.tabular import TabularPredictor
 from openpyxl.styles import PatternFill
 
+# Импорт функций обработки данных, feature engineering и prediction
 from src.data.data_processing import (
     load_data,
     show_dataset_stats
@@ -33,6 +34,7 @@ CONFIG_PATH = "config/config.yaml"
 MODEL_DIR = "AutogluonModels/TabularModel"
 MODEL_INFO_FILE = "model_info.json"
 
+
 def load_config(path: str):
     """Загружает YAML конфигурацию (METRICS_DICT, AG_MODELS)."""
     if not os.path.exists(path):
@@ -45,41 +47,44 @@ def load_config(path: str):
     logging.info(f"Конфигурация загружена из: {path}")
     return metrics_dict, ag_models, presets_list
 
+
 METRICS_DICT, AG_MODELS, PRESETS_LIST = load_config(CONFIG_PATH)
 
-def save_model_metadata(tgt_col, problem_type, eval_metric, fill_method_val, group_cols_fill_val,
-                        presets, chosen_models):
+
+def save_model_metadata(целевая_колонка, тип_задачи, метрика_оценки, метод_заполнения_пропусков, группировочные_колонки_для_заполнения,
+                       пресеты, выбранные_модели):
     """Сохраняет все настройки (колонки, тип задачи, метрика и т.д.) в JSON."""
     os.makedirs(MODEL_DIR, exist_ok=True)
-    info_dict = {
-        "tgt_col": tgt_col,
-        "problem_type": problem_type,
-        "eval_metric": eval_metric,
-        "fill_method_val": fill_method_val,
-        "group_cols_fill_val": group_cols_fill_val,
-        "presets": presets,
-        "chosen_models": chosen_models,
+    информация_словарь = {
+        "целевая_колонка": целевая_колонка,
+        "тип_задачи": тип_задачи,
+        "метрика_оценки": метрика_оценки,
+        "метод_заполнения_пропусков": метод_заполнения_пропусков,
+        "группировочные_колонки_для_заполнения": группировочные_колонки_для_заполнения,
+        "пресеты": пресеты,
+        "выбранные_модели": выбранные_модели,
     }
-    path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
-    with open(path_json, "w", encoding="utf-8") as f:
-        json.dump(info_dict, f, ensure_ascii=False, indent=2)
-    logging.info(f"Метаданные модели сохранены в: {path_json}")
+    путь_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
+    with open(путь_json, "w", encoding="utf-8") as f:
+        json.dump(информация_словарь, f, ensure_ascii=False, indent=2)
+    logging.info(f"Метаданные модели сохранены в: {путь_json}")
 
 
 def load_model_metadata():
     """Загружает сохраненные настройки из model_info.json, если доступно."""
-    path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
-    if not os.path.exists(path_json):
-        logging.info(f"Файл метаданных модели не найден: {path_json}")
+    путь_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
+    if not os.path.exists(путь_json):
+        logging.info(f"Файл метаданных модели не найден: {путь_json}")
         return None
     try:
-        with open(path_json, "r", encoding="utf-8") as f:
-            info = json.load(f)
-        logging.info(f"Метаданные модели загружены из: {path_json}")
-        return info
+        with open(путь_json, "r", encoding="utf-8") as f:
+            информация = json.load(f)
+        logging.info(f"Метаданные модели загружены из: {путь_json}")
+        return информация
     except Exception as e:
-        logging.error(f"Ошибка при загрузке метаданных модели из {path_json}: {e}", exc_info=True)
+        logging.error(f"Ошибка при загрузке метаданных модели из {путь_json}: {e}", exc_info=True)
         return None
+
 
 def try_load_existing_model():
     """Загружает предварительно обученный TabularPredictor, если доступен в MODEL_DIR."""
@@ -107,6 +112,7 @@ def try_load_existing_model():
     except Exception as e:
         st.warning(f"Не удалось автоматически загрузить модель из {MODEL_DIR}. Ошибка: {e}")
         logging.error(f"Ошибка при автоматической загрузке модели из {MODEL_DIR}: {e}", exc_info=True)
+
 
 def display_fit_summary(fit_summary):
     """Отображает резюме обучения в структурированном виде."""
@@ -303,10 +309,8 @@ def main():
         df_train = st.session_state.get("df")
         if df_train is None:
             st.warning("Пожалуйста, загрузите тренировочные данные сначала!")
-            logging.warning("Обучение модели: тренировочные данные не загружены.")
         elif tgt_col == "<нет>":
             st.error("Пожалуйста, выберите целевую колонку!")
-            logging.warning("Обучение модели: целевая колонка не выбрана.")
         else:
             try:
                 shutil.rmtree("AutogluonModels", ignore_errors=True)
@@ -470,11 +474,11 @@ def main():
                                 logging.info(f"Результаты автоматически сохранены в Excel файл: {save_path}")
                             except Exception as ex_save:
                                 st.error(f"Ошибка сохранения результатов при автоматическом запуске: {ex_save}")
-                                logging.error(f"Ошибка сохранения результатов при автоматическом запуске: {ex_save}", exc_info=True)
+                                logging.info(f"Ошибка сохранения результатов при автоматическом запуске: {ex_save}", exc_info=True)
 
             except Exception as ex:
                 st.error(f"Ошибка во время обучения: {ex}")
-                logging.error(f"Ошибка во время обучения: {ex}", exc_info=True)
+                logging.info(f"Ошибка во время обучения: {ex}", exc_info=True)
 
     # ========== 6) Прогноз ==========
     st.sidebar.header("6. Прогноз")
@@ -541,7 +545,7 @@ def main():
 
                 except Exception as ex:
                     st.error(f"Ошибка прогноза: {ex}")
-                    logging.error(f"Ошибка прогноза: {ex}", exc_info=True)
+                    logging.info(f"Ошибка прогноза: {ex}", exc_info=True)
 
     # ========== 7) Сохранение результатов (Excel) ==========
     st.sidebar.header("7. Сохранение результатов")
@@ -592,10 +596,9 @@ def main():
                     logging.info("Форматирование и пояснение для лучшей модели добавлены в лист 'ТаблицаЛидеров'.")
 
             st.success(f"Результаты сохранены в {save_path}")
-            logging.info(f"Результаты успешно сохранены в Excel файл: {save_path}")
         except Exception as ex:
             st.error(f"Ошибка сохранения результатов: {ex}")
-            logging.error(f"Ошибка сохранения результатов в Excel: {ex}", exc_info=True)
+            logging.info(f"Ошибка сохранения результатов в Excel: {ex}", exc_info=True)
 
     # ========== 8) Логи приложения ==========
     st.sidebar.header("8. Логи приложения")

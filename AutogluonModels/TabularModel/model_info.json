@@ -1,11 +1,11 @@
 {
-  "tgt_col": "survived",
-  "problem_type": "auto",
-  "eval_metric": null,
-  "fill_method_val": "Constant=0",
-  "group_cols_fill_val": [],
-  "presets": "medium_quality",
-  "chosen_models": [
+  "целевая_колонка": "survived",
+  "тип_задачи": "auto",
+  "метрика_оценки": null,
+  "метод_заполнения_пропусков": "None",
+  "группировочные_колонки_для_заполнения": [],
+  "пресеты": "medium_quality",
+  "выбранные_модели": [
     "* (all)"
   ]
 }
