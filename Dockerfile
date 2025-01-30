@@ -1,7 +1,8 @@
 FROM  --platform=amd64 python:3.10.16-bullseye
-RUN apt update -y 
+
 WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN pip install -r requirements.txt
-EXPOSE 8502
-CMD [ "streamlit","run", "app.py" ]
+EXPOSE 8501
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
