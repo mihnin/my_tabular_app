@@ -1,7 +1,7 @@
+# app.py
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import logging
 import shutil
 import yaml
 import os
@@ -16,7 +16,17 @@ from openpyxl.styles import PatternFill
 from src.data.data_processing import load_data, show_dataset_stats
 from src.features.feature_engineering import fill_missing_values
 from src.models.prediction import predict_tabular
-from src.utils.utils import setup_logger, read_logs, LOG_FILE
+
+# Теперь берём функции для логов из utils:
+from src.utils.utils import (
+    setup_logger,
+    read_logs,
+    log_info,
+    log_warning,
+    log_error,
+    log_debug,
+    LOG_FILE
+)
 from src.help_page import show_help_page
 
 CONFIG_PATH = "config/config.yaml"
@@ -24,26 +34,22 @@ MODEL_DIR = "AutogluonModels/TabularModel"
 MODEL_INFO_FILE = "model_info.json"
 
 def load_config(path: str):
-    """Загружает YAML-конфиг (метрики, список моделей, пресеты)"""
     if not os.path.exists(path):
+        log_error(f"Файл конфигурации {path} не найден.")
         raise FileNotFoundError(f"Файл конфигурации {path} не найден.")
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
     metrics_dict = data.get("metrics_dict", {})
     ag_models = data.get("ag_models", {})
     presets_list = data.get("presets_list", [])
-    logging.info(f"Конфигурация загружена из: {path}")
+    log_info(f"Конфигурация загружена из: {path}")
     return metrics_dict, ag_models, presets_list
 
-# Загружаем конфиг
 METRICS_DICT, AG_MODELS, PRESETS_LIST = load_config(CONFIG_PATH)
+
 
 def save_model_metadata(col_target, problem_type, eval_metric,
                         fill_method, group_cols, presets, chosen_models):
-    """
-    Сохраняет настройки обучения (Target, тип задачи, метрика и т.д.) в JSON
-    для последующей автозагрузки.
-    """
     os.makedirs(MODEL_DIR, exist_ok=True)
     info_dict = {
         "целевая_колонка": col_target,
@@ -57,36 +63,28 @@ def save_model_metadata(col_target, problem_type, eval_metric,
     path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
     with open(path_json, "w", encoding="utf-8") as f:
         json.dump(info_dict, f, ensure_ascii=False, indent=2)
-    logging.info(f"Настройки модели сохранены в {path_json}")
+    log_info(f"Настройки модели сохранены: {path_json}")
 
 def load_model_metadata():
-    """
-    Загружает JSON-файл с сохранёнными настройками.
-    Возвращает словарь или None, если файла нет.
-    """
     path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
     if not os.path.exists(path_json):
-        logging.info("model_info.json не найден — пропускаем загрузку настроек.")
+        log_info("model_info.json не найден, пропускаем автозагрузку.")
         return None
     try:
         with open(path_json, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        logging.error(f"Ошибка при чтении model_info.json: {e}", exc_info=True)
+        log_error(f"Ошибка чтения model_info.json: {e}")
         return None
 
 def try_load_existing_model():
-    """
-    Если в MODEL_DIR есть готовая модель и model_info.json,
-    загружаем их автоматически и восстанавливаем session_state.
-    """
     if not os.path.exists(MODEL_DIR):
-        logging.info("Папка модели (AutogluonModels/TabularModel) не найдена, пропускаем автозагрузку.")
+        log_info("Папка модели не найдена, пропускаем автозагрузку.")
         return
     try:
         loaded_predictor = TabularPredictor.load(MODEL_DIR)
         st.session_state["predictor"] = loaded_predictor
-        st.info(f"Загружена модель из {MODEL_DIR}")
+        st.info(f"Автозагрузка модели из {MODEL_DIR}")
 
         meta = load_model_metadata()
         if meta:
@@ -97,13 +95,12 @@ def try_load_existing_model():
             st.session_state["group_cols_for_fill_key"] = meta.get("группировочные_колонки_для_заполнения", [])
             st.session_state["presets_key"] = meta.get("пресеты", "medium_quality")
             st.session_state["models_key"] = meta.get("выбранные_модели", ["* (all)"])
-            st.info("Настройки восстановлены (model_info.json).")
-
+            st.info("Настройки восстановлены из model_info.json")
     except Exception as e:
         st.warning(f"Не удалось загрузить модель: {e}")
+        log_warning(f"Не удалось загрузить модель: {e}")
 
 def display_fit_summary(fit_summary):
-    """Красиво выводит fit_summary из AutoGluon."""
     if fit_summary is None:
         st.warning("fit_summary отсутствует.")
         return
@@ -119,7 +116,7 @@ def display_fit_summary(fit_summary):
         df_ = pd.DataFrame.from_dict(perf, orient="index", columns=["Score"])
         st.dataframe(df_.sort_values(by="Score", ascending=False))
     else:
-        st.write("Нет данных.")
+        st.write("Нет информации.")
 
     st.subheader("Время обучения моделей")
     ft = fit_summary.get("model_fit_times", {})
@@ -145,7 +142,6 @@ def display_fit_summary(fit_summary):
         st.write("Нет гиперпараметров.")
 
 def extract_ensemble_info(predictor, best_model_name: str):
-    """Если лучшая модель — WeightedEnsemble, возвращаем DF с составом, иначе None."""
     if not best_model_name.startswith("WeightedEnsemble"):
         return None
     info = predictor.info()
@@ -162,11 +158,11 @@ def extract_ensemble_info(predictor, best_model_name: str):
     return pd.DataFrame(data)
 
 def main():
-    # Инициализируем логгер с debug=True (при необходимости)
-    setup_logger(debug=True)
-    logging.debug("=== Запущено приложение (Tabular) в debug-режиме ===")
+    # Используем логгер (по умолчанию INFO, можно debug=True при нужде)
+    setup_logger(debug=False)
+    log_info("=== Запуск приложения (Tabular) в режиме INFO ===")
 
-    # Пытаемся автозагрузить модель
+    # Попробуем загрузить модель
     if "predictor" not in st.session_state or st.session_state["predictor"] is None:
         try_load_existing_model()
 
@@ -177,25 +173,25 @@ def main():
         show_help_page()
         return
 
-    st.title("AutoGluon Tabular - Бизнес-приложение")
+    st.title("Бизнес-приложение для прогнозирования табличных данных. Версия 1.0")
 
-    # Инициализация session_state
+    # Инициализация
     for key_ in ["df","df_predict","predictor","leaderboard","predictions","fit_summary","feature_importance","ensemble_info"]:
         if key_ not in st.session_state:
             st.session_state[key_] = None
 
-
-
-    # ---------- (1) Загрузка данных ----------
+    # (1) Загрузка
     st.sidebar.header("1. Загрузка данных")
     train_file = st.sidebar.file_uploader("Train-файл", type=["csv","xls","xlsx"])
-    predict_file = st.sidebar.file_uploader("Файл прогноза", type=["csv","xls","xlsx"])
+    predict_file = st.sidebar.file_uploader("Прогноз-файл", type=["csv","xls","xlsx"])
 
     if st.sidebar.button("Загрузить"):
         if not train_file:
-            st.error("Train-файл обязателен!")
+            st.error("Train обязателен!")
+            log_warning("Пользователь не выбрал Train-файл.")
         elif not predict_file:
-            st.error("Файл для прогнозов обязателен!")
+            st.error("Прогноз-файл обязателен!")
+            log_warning("Пользователь не выбрал файл для прогнозов.")
         else:
             try:
                 df_train = load_data(train_file)
@@ -205,6 +201,7 @@ def main():
 
                 st.subheader("Статистика Train")
                 show_dataset_stats(df_train)
+                log_info(f"Train-файл {train_file.name} успешно загружен ({len(df_train)} строк).")
 
                 df_predict = load_data(predict_file)
                 st.session_state["df_predict"] = df_predict
@@ -213,16 +210,17 @@ def main():
 
                 st.subheader("Статистика (прогноз)")
                 show_dataset_stats(df_predict)
+                log_info(f"Файл для прогноза {predict_file.name} успешно загружен ({len(df_predict)} строк).")
 
             except Exception as e:
                 st.error(f"Ошибка загрузки: {e}")
+                log_error(f"Ошибка загрузки: {e}")
 
-    # ---------- (2) Настройка колонок ----------
+    # (2) Настройка колонок
     st.sidebar.header("2. Настройка колонок")
     df_cur = st.session_state["df"]
     all_cols = list(df_cur.columns) if df_cur is not None else []
 
-    # Предотвращаем ValueError: ... not in iterable
     if "tgt_col_key" not in st.session_state:
         st.session_state["tgt_col_key"] = "<нет>"
     else:
@@ -230,79 +228,84 @@ def main():
             st.session_state["tgt_col_key"] = "<нет>"
 
     tgt_col = st.sidebar.selectbox("Целевая колонка", ["<нет>"]+all_cols, key="tgt_col_key")
+    log_info(f"Выбрана целевая колонка: {tgt_col}")
 
     if "problem_type_key" not in st.session_state:
         st.session_state["problem_type_key"] = "auto"
-    problem_type_options = ["auto","binary","multiclass","regression"]
-    problem_type = st.sidebar.selectbox("Тип задачи", problem_type_options,
-                                        index=0, key="problem_type_key")
+    problem_options = ["auto","binary","multiclass","regression"]
+    problem_type = st.sidebar.selectbox("Тип задачи", problem_options, key="problem_type_key")
+    log_info(f"Выбран тип задачи: {problem_type}")
 
     if "eval_metric_key" not in st.session_state:
         st.session_state["eval_metric_key"] = "auto"
-    eval_metric_options = ["auto"] + list(METRICS_DICT.keys())
-    eval_metric = st.sidebar.selectbox("Метрика", eval_metric_options,
-                                       index=0, key="eval_metric_key")
+    eval_metric_list = ["auto"] + list(METRICS_DICT.keys())
+    eval_metric = st.sidebar.selectbox("Метрика", eval_metric_list, key="eval_metric_key")
+    log_info(f"Выбрана метрика: {eval_metric}")
 
-    # ---------- (3) Обработка пропусков ----------
+    # (3) Пропуски
     st.sidebar.header("3. Пропуски")
-    fill_options = ["None","Constant=0","Mean","Median","Mode"]
+    fill_opts = ["None","Constant=0","Mean","Median","Mode"]
     if "fill_method_key" not in st.session_state:
         st.session_state["fill_method_key"] = "None"
-    fill_method = st.sidebar.selectbox("Заполнение пропусков", fill_options, key="fill_method_key")
+    fill_method = st.sidebar.selectbox("Заполнение пропусков", fill_opts, key="fill_method_key")
+    log_info(f"Метод заполнения: {fill_method}")
 
     group_cols_for_fill = []
 
-    # ---------- (4) Настройки модели ----------
+    # (4) Настройки модели
     st.sidebar.header("4. Настройки модели")
-    model_keys = list(AG_MODELS.keys())
-    model_choices = ["* (all)"] + model_keys
-
+    model_keys_list = list(AG_MODELS.keys())
+    model_choices = ["* (all)"] + model_keys_list
     if "models_key" not in st.session_state:
         st.session_state["models_key"] = ["* (all)"]
-    chosen_models = st.sidebar.multiselect(
-        "Модели AutoGluon",
-        model_choices,
-        default=st.session_state["models_key"],
-        key="models_key"
-    )
+    chosen_models = st.sidebar.multiselect("Модели AutoGluon", model_choices,
+                                           default=st.session_state["models_key"],
+                                           key="models_key")
+    log_info(f"Выбраны модели: {chosen_models}")
 
     if "presets_key" not in st.session_state:
         st.session_state["presets_key"] = "medium_quality"
     presets = st.sidebar.selectbox("Presets", PRESETS_LIST,
                                    index=PRESETS_LIST.index(st.session_state["presets_key"]) if st.session_state["presets_key"] in PRESETS_LIST else 0,
                                    key="presets_key")
+    log_info(f"Выбран пресет: {presets}")
+
     if "time_limit_key" not in st.session_state:
         st.session_state["time_limit_key"] = 60
     time_limit = st.sidebar.number_input("Time limit (sec)", 10, 36000, st.session_state["time_limit_key"], key="time_limit_key")
+    log_info(f"Лимит времени: {time_limit} сек")
 
-    # ---------- (5) Обучение ----------
+    # (5) Обучение
     st.sidebar.header("5. Обучение")
     if "auto_predict_save_checkbox" not in st.session_state:
         st.session_state["auto_predict_save_checkbox"] = False
     auto_predict_save = st.sidebar.checkbox("Авто-прогноз + сохранение?", value=False, key="auto_predict_save_checkbox")
+    log_info(f"Флаг автопрогноза: {auto_predict_save}")
 
     if st.sidebar.button("Обучить модель"):
-        df_tr = st.session_state["df"]
+        df_tr = st.session_state.get("df")
         if df_tr is None:
             st.warning("Train не загружен!")
+            log_warning("Попытка обучения без Train.")
         elif tgt_col == "<нет>":
             st.error("Целевая колонка не выбрана!")
+            log_warning("Обучение невозможно: tgt_col='<нет>'")
         else:
             try:
-                # Удаляем старые модели
+                log_info("Удаляем старые модели из AutogluonModels...")
                 shutil.rmtree("AutogluonModels", ignore_errors=True)
 
-                # Подготовим данные
-                df_ready = df_tr.copy()
                 fill_val = fill_method
-                df_ready = fill_missing_values(df_ready, fill_val)
+                chosen_metric_val = eval_metric if eval_metric!="auto" else None
+                log_info(f"Начинаем обучение (metric={chosen_metric_val}, time_limit={time_limit}, presets={presets}, models={chosen_models})")
 
-                chosen_metric_val = eval_metric if eval_metric != "auto" else None
-                # Готовим hyperparams
-                if not chosen_models or (len(chosen_models)==1 and chosen_models[0]=="* (all)"):
+                df_ready = df_tr.copy()
+                df_ready = fill_missing_values(df_ready, fill_val)
+                all_models_opt = "* (all)"
+                if (len(chosen_models)==1 and chosen_models[0]==all_models_opt) or (len(chosen_models)==0):
                     hyperparams = None
                 else:
-                    no_star = [m for m in chosen_models if m!="* (all)"]
+                    no_star = [m for m in chosen_models if m!=all_models_opt]
                     hyperparams = {m: {} for m in no_star}
 
                 predictor = TabularPredictor(
@@ -316,36 +319,41 @@ def main():
                     presets=presets,
                     hyperparameters=hyperparams
                 )
+
                 st.session_state["predictor"] = predictor
                 st.success("Модель обучена!")
+                log_info("Модель успешно обучена.")
 
                 lb = predictor.leaderboard(df_ready)
                 st.session_state["leaderboard"] = lb
-                st.subheader("Лидерборд (Leaderboard)")
+                st.subheader("Лидерборд")
                 st.dataframe(lb)
+                log_info(f"Лидерборд:\n{lb}")
 
                 fsumm = predictor.fit_summary()
                 st.session_state["fit_summary"] = fsumm
-                with st.expander("Резюме обучения"):
+                with st.expander("Fit Summary"):
                     display_fit_summary(fsumm)
 
                 fi = predictor.feature_importance(df_ready)
                 st.session_state["feature_importance"] = fi
                 st.subheader("Важность признаков")
                 st.dataframe(fi)
+                log_info(f"Feature Importance:\n{fi}")
 
                 if not lb.empty:
                     best_model = lb.iloc[0]["model"]
                     best_score = lb.iloc[0]["score_val"]
                     st.info(f"Лучшая модель: {best_model}, score={best_score:.4f}")
-                    # Если WeightedEnsemble, выведем состав
-                    ensdf = extract_ensemble_info(predictor, best_model)
-                    if ensdf is not None:
-                        st.session_state["ensemble_info"] = ensdf
-                        st.write("### Состав WeightedEnsemble")
-                        st.dataframe(ensdf)
+                    log_info(f"Лучшая модель: {best_model} (score={best_score:.4f})")
 
-                # Сохраняем настройки
+                    ens_df = extract_ensemble_info(predictor, best_model)
+                    if ens_df is not None:
+                        st.session_state["ensemble_info"] = ens_df
+                        st.write("### Состав WeightedEnsemble")
+                        st.dataframe(ens_df)
+                        log_info(f"Ансамбль WeightedEnsemble:\n{ens_df}")
+
                 save_model_metadata(
                     col_target=tgt_col,
                     problem_type=problem_type,
@@ -356,42 +364,38 @@ def main():
                     chosen_models=chosen_models
                 )
 
-                # Если включён чекбокс «Авто-прогноз + сохранение»
+                # Автопрогноз
                 if auto_predict_save:
-                    st.info("Автоматический прогноз + формирование Excel для скачивания...")
+                    st.info("Автоматический прогноз + Excel для скачивания...")
                     df_fore = st.session_state.get("df_predict")
                     if df_fore is None:
-                        st.warning("Нет файла для прогноза!")
+                        st.warning("Нет данных для прогноза!")
+                        log_warning("Автопрогноз невозможен: df_predict=None")
                     else:
                         try:
-                            df_fore_ = df_fore.copy()
-                            df_fore_ = fill_missing_values(df_fore_, fill_val)
-                            preds = predictor.predict(df_fore_)
+                            dff_ = df_fore.copy()
+                            dff_ = fill_missing_values(dff_, fill_val)
+                            preds = predictor.predict(dff_)
                             if isinstance(preds, pd.Series):
                                 preds = preds.to_frame("prediction")
-                            out_df = pd.concat([df_fore_.reset_index(drop=True), preds.reset_index(drop=True)], axis=1)
+                            out_df = pd.concat([dff_.reset_index(drop=True), preds.reset_index(drop=True)], axis=1)
                             st.dataframe(out_df.head())
 
                             excel_buf = io.BytesIO()
                             with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
-                                # 1) Результаты
                                 out_df.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
-                                # 2) Лидерборд
                                 lb.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
                                 if not lb.empty:
                                     sheet_lb = writer.sheets["ТаблицаЛидеров"]
-                                    best_idx = lb.iloc[0].name
+                                    bidx = lb.iloc[0].name
                                     fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-                                    row_excel = best_idx + 2
+                                    row_excel = bidx + 2
                                     for col_idx in range(1, lb.shape[1]+1):
                                         cell = sheet_lb.cell(row=row_excel, column=col_idx)
                                         cell.fill = fill_green
-                                # 3) Важность
                                 fi.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
-                                # 4) Ensemble
-                                en_ = st.session_state["ensemble_info"]
-                                if en_ is not None:
-                                    en_.to_excel(writer, sheet_name="EnsembleInfo", index=False)
+                                if st.session_state["ensemble_info"] is not None:
+                                    st.session_state["ensemble_info"].to_excel(writer, sheet_name="EnsembleInfo", index=False)
 
                             excel_buf.seek(0)
                             st.download_button(
@@ -400,25 +404,32 @@ def main():
                                 file_name="results.xlsx",
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             )
-                            st.success("Готово: Excel можно скачать!")
-                        except Exception as ep:
-                            st.error(f"Ошибка автопрогноза: {ep}")
+                            st.success("Файл Excel можно скачать.")
+                            log_info("Автопрогноз: Excel сформирован, пользователь может скачать.")
 
-            except Exception as ex:
-                st.error(f"Ошибка обучения: {ex}")
+                        except Exception as ax:
+                            st.error(f"Ошибка автопрогноза: {ax}")
+                            log_error(f"Ошибка автопрогноза: {ax}")
 
-    # ---------- (6) Прогноз (ручной) ----------
+            except Exception as ex_:
+                st.error(f"Ошибка обучения: {ex_}")
+                log_error(f"Ошибка обучения: {ex_}")
+
+    # (6) Прогноз вручную
     st.sidebar.header("6. Прогноз вручную")
     if st.sidebar.button("Сделать прогноз"):
         predictor = st.session_state.get("predictor")
         if predictor is None:
             st.warning("Сначала обучите модель!")
+            log_warning("Нельзя прогнозировать: predictor=None.")
         elif tgt_col == "<нет>":
             st.error("Целевая колонка не выбрана.")
+            log_warning("Нельзя прогнозировать: tgt_col='<нет>'.")
         else:
             df_fore = st.session_state.get("df_predict")
             if df_fore is None:
                 st.error("Нет файла для прогноза!")
+                log_warning("Нельзя прогнозировать: df_predict=None.")
             else:
                 try:
                     fmethod = st.session_state["fill_method_key"]
@@ -431,6 +442,7 @@ def main():
                     st.session_state["predictions"] = out_
                     st.subheader("Предсказанные значения (первые строки)")
                     st.dataframe(out_.head())
+                    log_info(f"Ручной прогноз выполнен, первые строки:\n{out_.head(5)}")
 
                     if st.session_state["ensemble_info"] is not None:
                         st.write("Состав WeightedEnsemble:")
@@ -438,14 +450,15 @@ def main():
 
                 except Exception as xp:
                     st.error(f"Ошибка прогноза: {xp}")
+                    log_error(f"Ошибка прогноза: {xp}")
 
-    # ---------- (7) Сохранение (CSV/Excel) ----------
-    st.sidebar.header("7. Сохранение результатов (ручное)")
-    # Кнопка CSV
+    # (7) Сохранение (CSV/Excel)
+    st.sidebar.header("7. Сохранение результатов")
     if st.sidebar.button("Сохранить в CSV"):
         final_preds = st.session_state.get("predictions")
         if final_preds is None:
-            st.warning("Сначала сделайте прогноз (нет 'predictions').")
+            st.warning("Сделайте прогноз (predictions=None).")
+            log_warning("Нельзя сохранить CSV: нет 'predictions'.")
         else:
             csv_data = final_preds.to_csv(index=False, encoding="utf-8-sig")
             st.download_button(
@@ -454,15 +467,16 @@ def main():
                 file_name="results.csv",
                 mime="text/csv"
             )
+            log_info("Пользователь может скачать results.csv")
 
-    # Кнопка Excel
     if st.sidebar.button("Сохранить в Excel"):
         final_preds = st.session_state.get("predictions")
         lb = st.session_state.get("leaderboard")
         fi = st.session_state.get("feature_importance")
         en_df = st.session_state.get("ensemble_info")
         if final_preds is None:
-            st.warning("Сначала сделайте прогноз (predictions нет).")
+            st.warning("Сделайте прогноз (predictions=None).")
+            log_warning("Нельзя сохранить Excel: нет 'predictions'.")
         else:
             xbuf = io.BytesIO()
             with pd.ExcelWriter(xbuf, engine="openpyxl") as writer:
@@ -489,16 +503,15 @@ def main():
                 file_name="results.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-    # ---------- (8) Логи приложения ----------
-    st.sidebar.header("8. Логи приложения")
+            log_info("Пользователь может скачать results.xlsx (ручной)")
 
-    # Показать логи
+    # (8) Логи приложения
+    st.sidebar.header("8. Логи приложения")
     if st.sidebar.button("Показать логи"):
         logs_ = read_logs()
         st.subheader("Лог-файл (app.log)")
         st.text(logs_)
 
-    # Скачать логи
     if st.sidebar.button("Скачать логи"):
         logs_ = read_logs()
         st.download_button(
@@ -508,8 +521,7 @@ def main():
             mime="text/plain"
         )
 
-    # Очистка логов (переместили «в конец» раздела логов)
-    clear_input = st.sidebar.text_input("Очистить логи (введите 'delete'):")
+    clear_input = st.sidebar.text_input("Очистить логи (delete):")
     if st.sidebar.button("Очистить логи"):
         if clear_input.strip().lower() == "delete":
             # Закрываем все хендлеры
@@ -518,56 +530,51 @@ def main():
                 if hasattr(h, 'baseFilename') and os.path.abspath(h.baseFilename) == os.path.abspath(LOG_FILE):
                     h.close()
                     logger.removeHandler(h)
-
-            # Удаляем файл, если есть
             if os.path.exists(LOG_FILE):
                 os.remove(LOG_FILE)
-                st.warning("Логи удалены.")
+                st.warning("Логи удалены!")
             else:
-                st.info("Файл логов отсутствует, нечего удалять.")
-
-            # Создаём пустой заново
+                st.info("Нет файла логов.")
             with open(LOG_FILE, 'w', encoding='utf-8'):
                 pass
             fh = logging.FileHandler(LOG_FILE, encoding='utf-8')
-            formatter = logging.Formatter(
-                "%(asctime)s [%(levelname)s] %(module)s.%(funcName)s - %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S"
-            )
+            formatter = ...
             fh.setFormatter(formatter)
             logger.addHandler(fh)
-            logger.info("Создан новый log-файл (после очистки).")
+            log_info("Создан новый log-файл (после очистки).")
         else:
-            st.warning("Неверное слово, логи не удалены.")
-    # ---------- (9) Скачать модели + логи (Zip) ----------
-    st.sidebar.header("9. Скачать модели и логи")
+            st.warning("Неверное слово, логи не очищены.")
+
+    # (9) Скачать модели + логи
+    st.sidebar.header("9. Скачать модели + логи")
     if st.sidebar.button("Скачать архив (модели+логи)"):
         if not os.path.exists("AutogluonModels"):
-            st.error("Папка AutogluonModels не найдена — модель не обучалась?")
+            st.error("Папка AutogluonModels не найдена.")
+            log_warning("Нет AutogluonModels => архив скачать нельзя.")
         else:
             try:
                 zip_buf = io.BytesIO()
-                # Создаём архив внутри with, потом скачиваем
                 with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
                     for root, dirs, files in os.walk("AutogluonModels"):
                         for file in files:
                             full_path = os.path.join(root, file)
                             arcname = os.path.relpath(full_path, start="AutogluonModels")
                             zf.write(full_path, arcname)
-                    # Добавляем лог-файл
                     if os.path.exists(LOG_FILE):
                         zf.write(LOG_FILE, arcname="app.log")
 
                 zip_buf.seek(0)
                 st.download_button(
-                    label="Скачать ZIP (модели+логи)",
+                    label="Скачать models_and_logs.zip",
                     data=zip_buf.getvalue(),
                     file_name="models_and_logs.zip",
                     mime="application/zip"
                 )
-            except Exception as exc:
-                st.error(f"Ошибка архивации: {exc}")
-
+                log_info("Пользователь может скачать models_and_logs.zip")
+            except Exception as e_:
+                st.error(f"Ошибка архивации: {e_}")
+                log_error(f"Ошибка архивации: {e_}")
 
 if __name__ == "__main__":
     main()
+
