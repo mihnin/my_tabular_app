@@ -21,7 +21,14 @@ ag_models:
   ExtraTreesGini: ExtraTreesGini
   XGBoost: XGBoost
   NeuralNetFastAI: NeuralNetFastAI
-  # Add more models if needed
+  RandomForest: RFModel
+  ExtraTrees: XTModel
+  KNN: KNNModel
+  Linear: LinearModel
+  TabularNeuralNetTorch: TabularNeuralNetTorchModel
+  FastAI: NNFastAiTabularModel
+  FTTransformer: FTTransformerModel
+  TabPFN: TabPFNModel
 
 presets_list:
   - fast_training
