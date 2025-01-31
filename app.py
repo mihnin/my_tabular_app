@@ -184,56 +184,7 @@ def main():
         if key_ not in st.session_state:
             st.session_state[key_] = None
 
-    # ---------- (8) Логи приложения ----------
-    st.sidebar.header("8. Логи приложения")
 
-    # Показать логи
-    if st.sidebar.button("Показать логи"):
-        logs_ = read_logs()
-        st.subheader("Лог-файл (app.log)")
-        st.text(logs_)
-
-    # Скачать логи
-    if st.sidebar.button("Скачать логи"):
-        logs_ = read_logs()
-        st.download_button(
-            label="Скачать app.log",
-            data=logs_,
-            file_name="app.log",
-            mime="text/plain"
-        )
-
-    # Очистка логов (переместили «в конец» раздела логов)
-    clear_input = st.sidebar.text_input("Очистить логи (введите 'delete'):")
-    if st.sidebar.button("Очистить логи"):
-        if clear_input.strip().lower() == "delete":
-            # Закрываем все хендлеры
-            logger = logging.getLogger()
-            for h in logger.handlers[:]:
-                if hasattr(h, 'baseFilename') and os.path.abspath(h.baseFilename) == os.path.abspath(LOG_FILE):
-                    h.close()
-                    logger.removeHandler(h)
-
-            # Удаляем файл, если есть
-            if os.path.exists(LOG_FILE):
-                os.remove(LOG_FILE)
-                st.warning("Логи удалены.")
-            else:
-                st.info("Файл логов отсутствует, нечего удалять.")
-
-            # Создаём пустой заново
-            with open(LOG_FILE, 'w', encoding='utf-8'):
-                pass
-            fh = logging.FileHandler(LOG_FILE, encoding='utf-8')
-            formatter = logging.Formatter(
-                "%(asctime)s [%(levelname)s] %(module)s.%(funcName)s - %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S"
-            )
-            fh.setFormatter(formatter)
-            logger.addHandler(fh)
-            logger.info("Создан новый log-файл (после очистки).")
-        else:
-            st.warning("Неверное слово, логи не удалены.")
 
     # ---------- (1) Загрузка данных ----------
     st.sidebar.header("1. Загрузка данных")
@@ -538,7 +489,56 @@ def main():
                 file_name="results.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+    # ---------- (8) Логи приложения ----------
+    st.sidebar.header("8. Логи приложения")
 
+    # Показать логи
+    if st.sidebar.button("Показать логи"):
+        logs_ = read_logs()
+        st.subheader("Лог-файл (app.log)")
+        st.text(logs_)
+
+    # Скачать логи
+    if st.sidebar.button("Скачать логи"):
+        logs_ = read_logs()
+        st.download_button(
+            label="Скачать app.log",
+            data=logs_,
+            file_name="app.log",
+            mime="text/plain"
+        )
+
+    # Очистка логов (переместили «в конец» раздела логов)
+    clear_input = st.sidebar.text_input("Очистить логи (введите 'delete'):")
+    if st.sidebar.button("Очистить логи"):
+        if clear_input.strip().lower() == "delete":
+            # Закрываем все хендлеры
+            logger = logging.getLogger()
+            for h in logger.handlers[:]:
+                if hasattr(h, 'baseFilename') and os.path.abspath(h.baseFilename) == os.path.abspath(LOG_FILE):
+                    h.close()
+                    logger.removeHandler(h)
+
+            # Удаляем файл, если есть
+            if os.path.exists(LOG_FILE):
+                os.remove(LOG_FILE)
+                st.warning("Логи удалены.")
+            else:
+                st.info("Файл логов отсутствует, нечего удалять.")
+
+            # Создаём пустой заново
+            with open(LOG_FILE, 'w', encoding='utf-8'):
+                pass
+            fh = logging.FileHandler(LOG_FILE, encoding='utf-8')
+            formatter = logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(module)s.%(funcName)s - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S"
+            )
+            fh.setFormatter(formatter)
+            logger.addHandler(fh)
+            logger.info("Создан новый log-файл (после очистки).")
+        else:
+            st.warning("Неверное слово, логи не удалены.")
     # ---------- (9) Скачать модели + логи (Zip) ----------
     st.sidebar.header("9. Скачать модели и логи")
     if st.sidebar.button("Скачать архив (модели+логи)"):
