@@ -243,7 +243,7 @@ def main():
     log_info(f"Выбрана метрика: {eval_metric}")
 
     # (3) Пропуски
-    st.sidebar.header("3. Пропуски")
+    st.sidebar.header("3. Обработка пропусков")
     fill_opts = ["None","Constant=0","Mean","Median","Mode"]
     if "fill_method_key" not in st.session_state:
         st.session_state["fill_method_key"] = "None"
@@ -279,7 +279,7 @@ def main():
     st.sidebar.header("5. Обучение")
     if "auto_predict_save_checkbox" not in st.session_state:
         st.session_state["auto_predict_save_checkbox"] = False
-    auto_predict_save = st.sidebar.checkbox("Авто-прогноз + сохранение?", value=False, key="auto_predict_save_checkbox")
+    auto_predict_save = st.sidebar.checkbox("Авто-прогноз и сохранение", value=False, key="auto_predict_save_checkbox")
     log_info(f"Флаг автопрогноза: {auto_predict_save}")
 
     if st.sidebar.button("Обучить модель"):
