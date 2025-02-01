@@ -1,32 +1,31 @@
-import streamlit as st
-import plotly.express as px
-import pandas as pd
+# app.py
+import os
+import io
+import json
 import logging
 import shutil
-import yaml
-import os
-import json
-import io
 import zipfile
+from pathlib import Path
 
-from autogluon.tabular import TabularPredictor
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import yaml
 from openpyxl.styles import PatternFill
+from autogluon.tabular import TabularPredictor
 
-# Импорт функций обработки данных, feature engineering и prediction
-from src.data.data_processing import (
-    load_data,
-    show_dataset_stats
-)
-from src.features.feature_engineering import (
-    fill_missing_values
-)
-from src.models.prediction import (
-    predict_tabular
-)
+# Локальные модули
+from src.data.data_processing import load_data, show_dataset_stats
+from src.features.feature_engineering import fill_missing_values
+from src.models.prediction import predict_tabular  # Предполагается, что этот модуль существует
 from src.utils.utils import (
     setup_logger,
     read_logs,
-    LOG_FILE  # Импортируем LOG_FILE для доступа к имени файла лога
+    log_info,
+    log_warning,
+    log_error,
+    log_debug,
+    LOG_FILE
 )
 from src.help_page import show_help_page
 
@@ -36,627 +35,616 @@ MODEL_INFO_FILE = "model_info.json"
 
 
 def load_config(path: str):
-    """Загружает YAML конфигурацию (METRICS_DICT, AG_MODELS)."""
+    """Загружает конфигурацию из YAML файла."""
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Конфигурационный файл {path} не найден.")
+        log_error(f"Файл конфигурации {path} не найден.")
+        raise FileNotFoundError(f"Файл конфигурации {path} не найден.")
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
     metrics_dict = data.get("metrics_dict", {})
     ag_models = data.get("ag_models", {})
-    presets_list = data.get("presets_list", []) # Добавлен список пресетов из конфигурации
-    logging.info(f"Конфигурация загружена из: {path}")
+    presets_list = data.get("presets_list", [])
+    log_info(f"Конфигурация загружена из: {path}")
     return metrics_dict, ag_models, presets_list
 
 
 METRICS_DICT, AG_MODELS, PRESETS_LIST = load_config(CONFIG_PATH)
 
 
-def save_model_metadata(целевая_колонка, тип_задачи, метрика_оценки, метод_заполнения_пропусков, группировочные_колонки_для_заполнения,
-                       пресеты, выбранные_модели):
-    """Сохраняет все настройки (колонки, тип задачи, метрика и т.д.) в JSON."""
+def save_model_metadata(col_target, problem_type, eval_metric, fill_method, group_cols, presets, chosen_models):
+    """
+    Сохраняет метаданные модели в JSON файл.
+    """
     os.makedirs(MODEL_DIR, exist_ok=True)
-    информация_словарь = {
-        "целевая_колонка": целевая_колонка,
-        "тип_задачи": тип_задачи,
-        "метрика_оценки": метрика_оценки,
-        "метод_заполнения_пропусков": метод_заполнения_пропусков,
-        "группировочные_колонки_для_заполнения": группировочные_колонки_для_заполнения,
-        "пресеты": пресеты,
-        "выбранные_модели": выбранные_модели,
+    info_dict = {
+        "целевая_колонка": col_target,
+        "тип_задачи": problem_type,
+        "метрика_оценки": eval_metric,
+        "метод_заполнения_пропусков": fill_method,
+        "группировочные_колонки_для_заполнения": group_cols,
+        "пресеты": presets,
+        "выбранные_модели": chosen_models,
     }
-    путь_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
-    with open(путь_json, "w", encoding="utf-8") as f:
-        json.dump(информация_словарь, f, ensure_ascii=False, indent=2)
-    logging.info(f"Метаданные модели сохранены в: {путь_json}")
+    path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
+    with open(path_json, "w", encoding="utf-8") as f:
+        json.dump(info_dict, f, ensure_ascii=False, indent=2)
+    log_info(f"Настройки модели сохранены: {path_json}")
 
 
 def load_model_metadata():
-    """Загружает сохраненные настройки из model_info.json, если доступно."""
-    путь_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
-    if not os.path.exists(путь_json):
-        logging.info(f"Файл метаданных модели не найден: {путь_json}")
+    """
+    Загружает метаданные модели из JSON файла.
+    """
+    path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
+    if not os.path.exists(path_json):
+        log_info("model_info.json не найден, пропускаем автозагрузку.")
         return None
     try:
-        with open(путь_json, "r", encoding="utf-8") as f:
-            информация = json.load(f)
-        logging.info(f"Метаданные модели загружены из: {путь_json}")
-        return информация
+        with open(path_json, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        logging.error(f"Ошибка при загрузке метаданных модели из {путь_json}: {e}", exc_info=True)
+        log_error(f"Ошибка чтения model_info.json: {e}")
         return None
 
 
 def try_load_existing_model():
-    """Загружает предварительно обученный TabularPredictor, если доступен в MODEL_DIR."""
+    """
+    Пытается загрузить существующую модель из MODEL_DIR.
+    """
     if not os.path.exists(MODEL_DIR):
-        logging.info(f"Папка модели не найдена: {MODEL_DIR}, загрузка существующей модели пропущена.")
+        log_info("Папка модели не найдена, пропускаем автозагрузку.")
         return
     try:
         loaded_predictor = TabularPredictor.load(MODEL_DIR)
         st.session_state["predictor"] = loaded_predictor
-        st.info(f"Загружена ранее обученная модель из {MODEL_DIR}")
-        logging.info(f"Успешно загружена ранее обученная модель из: {MODEL_DIR}")
+        st.info(f"Автозагрузка модели из {MODEL_DIR}")
 
         meta = load_model_metadata()
         if meta:
-            st.session_state["tgt_col_key"] = meta.get("tgt_col", "<нет>")
-            st.session_state["problem_type_key"] = meta.get("problem_type", "auto")
-            st.session_state["eval_metric_key"] = meta.get("eval_metric", "auto")
-            st.session_state["fill_method_key"] = meta.get("fill_method_val", "None")
-            st.session_state["group_cols_for_fill_key"] = meta.get("group_cols_fill_val", [])
-            st.session_state["presets_key"] = meta.get("presets", "medium_quality")
-            st.session_state["models_key"] = meta.get("chosen_models", ["* (all)"])
-
-            st.info("Настройки (колонки, тип задачи, метрика и т.д.) восстановлены из model_info.json")
-            logging.info("Настройки модели восстановлены из model_info.json")
+            st.session_state["tgt_col_key"] = meta.get("целевая_колонка", "<нет>")
+            st.session_state["problem_type_key"] = meta.get("тип_задачи", "auto")
+            st.session_state["eval_metric_key"] = meta.get("метрика_оценки", "auto")
+            st.session_state["fill_method_key"] = meta.get("метод_заполнения_пропусков", "None")
+            st.session_state["group_cols_for_fill_key"] = meta.get("группировочные_колонки_для_заполнения", [])
+            st.session_state["presets_key"] = meta.get("пресеты", "medium_quality")
+            st.session_state["models_key"] = meta.get("выбранные_модели", ["* (all)"])
+            st.info("Настройки восстановлены из model_info.json")
     except Exception as e:
-        st.warning(f"Не удалось автоматически загрузить модель из {MODEL_DIR}. Ошибка: {e}")
-        logging.error(f"Ошибка при автоматической загрузке модели из {MODEL_DIR}: {e}", exc_info=True)
+        st.warning(f"Не удалось загрузить модель: {e}")
+        log_warning(f"Не удалось загрузить модель: {e}")
 
 
-def display_fit_summary(fit_summary):
-    """Отображает резюме обучения в структурированном виде."""
+def display_fit_summary(fit_summary: dict):
+    """
+    Отображает сводную информацию о процессе обучения.
+    """
     if fit_summary is None:
-        st.warning("Резюме обучения отсутствует.")
+        st.warning("fit_summary отсутствует.")
         return
 
     st.subheader("Общая информация")
-    st.write(f"- Тип проблемы: {fit_summary.get('problem_type', 'Н/Д')}")
-    st.write(f"- Метрика оценки: {fit_summary.get('eval_metric', 'Н/Д')}")
-    st.write(f"- Лучшая модель: {fit_summary.get('model_best', 'Н/Д')}")
-    st.write(f"- Количество классов: {fit_summary.get('num_classes', 'Н/Д')}")
-    st.write(f"- Количество фолдов для бэггинга: {fit_summary.get('num_bag_folds', 'Н/Д')}")
-    st.write(f"- Максимальный уровень стекинга: {fit_summary.get('max_stack_level', 'Н/Д')}")
+    st.write(f"- Тип задачи: {fit_summary.get('problem_type','N/A')}")
+    st.write(f"- Метрика: {fit_summary.get('eval_metric','N/A')}")
+    st.write(f"- Лучшая модель: {fit_summary.get('model_best','N/A')}")
 
     st.subheader("Производительность моделей")
-    model_performance = fit_summary.get('model_performance', {})
-    if model_performance:
-        df_performance = pd.DataFrame.from_dict(model_performance, orient='index', columns=['Score'])
-        st.dataframe(df_performance.sort_values(by='Score', ascending=False))
+    perf = fit_summary.get("model_performance", {})
+    if perf:
+        df_ = pd.DataFrame.from_dict(perf, orient="index", columns=["Score"])
+        st.dataframe(df_.sort_values(by="Score", ascending=False))
     else:
-        st.write("Информация о производительности моделей отсутствует.")
+        st.write("Нет информации.")
 
     st.subheader("Время обучения моделей")
-    model_fit_times = fit_summary.get('model_fit_times', {})
-    if model_fit_times:
-        df_fit_times = pd.DataFrame.from_dict(model_fit_times, orient='index', columns=['Время обучения (сек)'])
-        st.dataframe(df_fit_times.sort_values(by='Время обучения (сек)', ascending=True))
+    ft = fit_summary.get("model_fit_times", {})
+    if ft:
+        df_ = pd.DataFrame.from_dict(ft, orient="index", columns=["FitTime"])
+        st.dataframe(df_.sort_values(by="FitTime", ascending=True))
     else:
-        st.write("Информация о времени обучения моделей отсутствует.")
+        st.write("Нет данных о времени обучения.")
 
-    st.subheader("Время прогнозирования моделей")
-    model_pred_times = fit_summary.get('model_pred_times', {})
-    if model_pred_times:
-        df_pred_times = pd.DataFrame.from_dict(model_pred_times, orient='index', columns=['Время прогнозирования (сек)'])
-        st.dataframe(df_pred_times.sort_values(by='Время прогнозирования (сек)', ascending=True))
+    st.subheader("Время предсказаний")
+    pt = fit_summary.get("model_pred_times", {})
+    if pt:
+        df_ = pd.DataFrame.from_dict(pt, orient="index", columns=["PredTime"])
+        st.dataframe(df_.sort_values(by="PredTime", ascending=True))
     else:
-        st.write("Информация о времени прогнозирования моделей отсутствует.")
+        st.write("Нет данных о времени предсказания.")
 
     st.subheader("Гиперпараметры моделей")
-    model_hyperparams = fit_summary.get('model_hyperparams', {})
-    if model_hyperparams:
-        st.json(model_hyperparams) # Отображение гиперпараметров в виде JSON, можно улучшить форматирование при необходимости
+    mhp = fit_summary.get("model_hyperparams", {})
+    if mhp:
+        st.json(mhp)
     else:
-        st.write("Информация о гиперпараметрах моделей отсутствует.")
+        st.write("Нет гиперпараметров.")
 
 
-def main():
-    setup_logger()
-    logging.info("=== Запуск Streamlit Tabular App (main) ===")
+def extract_ensemble_info(predictor, best_model_name: str):
+    """
+    Извлекает информацию об ансамбле, если лучшая модель является WeightedEnsemble.
+    """
+    if not best_model_name.startswith("WeightedEnsemble"):
+        return None
+    info = predictor.info()
+    model_info_all = info.get("model_info", {})
+    best_info = model_info_all.get(best_model_name, {})
+    child_info = best_info.get("children_info", {})
+    weights = child_info.get("child_weights", [])
+    children = child_info.get("child_model_names", [])
+    if not weights or not children:
+        return None
+    data = [{"Model": c, "Weight": w} for c, w in zip(children, weights)]
+    return pd.DataFrame(data)
 
-    if "predictor" not in st.session_state or st.session_state["predictor"] is None:
-        try_load_existing_model()
 
-    pages = ["Главная", "Help"]
-    choice = st.sidebar.selectbox("Навигация", pages, key="page_choice")
-    logging.info(f"Выбрана страница: {choice}")
+def generate_excel_buffer(preds_df: pd.DataFrame, lb: pd.DataFrame = None,
+                            fi: pd.DataFrame = None, ensemble_info: pd.DataFrame = None) -> io.BytesIO:
+    """
+    Генерирует буфер Excel с результатами прогноза, лидербордом, важностью признаков и информацией об ансамбле.
+    """
+    excel_buf = io.BytesIO()
+    with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
+        preds_df.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
+        if lb is not None:
+            lb.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
+            if not lb.empty:
+                sheet_lb = writer.sheets["ТаблицаЛидеров"]
+                best_idx = lb.iloc[0].name
+                fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                row_excel = best_idx + 2
+                for col_idx in range(1, lb.shape[1] + 1):
+                    cell = sheet_lb.cell(row=row_excel, column=col_idx)
+                    cell.fill = fill_green
+        if fi is not None:
+            fi.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
+        if ensemble_info is not None:
+            ensemble_info.to_excel(writer, sheet_name="EnsembleInfo", index=False)
+    excel_buf.seek(0)
+    return excel_buf
 
-    if choice == "Help":
-        show_help_page()
-        return
 
-    st.title("AutoGluon Tabular App")
+def clear_logs():
+    """
+    Очищает лог-файл, если пользователь ввёл слово 'delete'.
+    """
+    clear_input = st.sidebar.text_input("Очистить логи (delete):")
+    if st.sidebar.button("Очистить логи"):
+        if clear_input.strip().lower() == "delete":
+            logger = logging.getLogger()
+            # Закрываем и удаляем обработчики, связанные с лог-файлом
+            for h in logger.handlers[:]:
+                if hasattr(h, 'baseFilename') and os.path.abspath(h.baseFilename) == os.path.abspath(LOG_FILE):
+                    h.close()
+                    logger.removeHandler(h)
+            if os.path.exists(LOG_FILE):
+                os.remove(LOG_FILE)
+                st.warning("Логи удалены!")
+            else:
+                st.info("Нет файла логов.")
+            # Создаем новый лог-файл
+            with open(LOG_FILE, 'w', encoding='utf-8'):
+                pass
+            fh = logging.FileHandler(LOG_FILE, encoding='utf-8')
+            formatter = logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(module)s.%(funcName)s - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S"
+            )
+            fh.setFormatter(formatter)
+            logger.addHandler(fh)
+            log_info("Создан новый log-файл (после очистки).")
+        else:
+            st.warning("Неверное слово, логи не очищены.")
 
-    # Инициализация ключей session_state
-    if "df" not in st.session_state:
-        st.session_state["df"] = None
-    if "df_predict" not in st.session_state:
-        st.session_state["df_predict"] = None
-    if "predictor" not in st.session_state:
-        st.session_state["predictor"] = None
-    if "leaderboard" not in st.session_state:
-        st.session_state["leaderboard"] = None
-    if "predictions" not in st.session_state:
-        st.session_state["predictions"] = None
-    if "fit_summary" not in st.session_state:
-        st.session_state["fit_summary"] = None
-    if "feature_importance" not in st.session_state: # для важности признаков
-        st.session_state["feature_importance"] = None
 
-    if "best_model_name" not in st.session_state:
-        st.session_state["best_model_name"] = None
-    if "best_model_score" not in st.session_state:
-        st.session_state["best_model_score"] = None
-
-    # ========== 1) Загрузка данных ==========
+def upload_data():
+    """
+    Обрабатывает загрузку train и predict файлов.
+    """
     st.sidebar.header("1. Загрузка данных")
-    train_file = st.sidebar.file_uploader("Тренировочные данные (обязательно)", type=["csv", "xls", "xlsx"], key="train_file_uploader")
-    predict_file = st.sidebar.file_uploader("Данные для прогнозирования (обязательно)", type=["csv", "xls", "xlsx"], key="predict_file_uploader") # Теперь обязательно
+    train_file = st.sidebar.file_uploader("Train-файл", type=["csv", "xls", "xlsx"])
+    predict_file = st.sidebar.file_uploader("Прогноз-файл", type=["csv", "xls", "xlsx"])
 
-    if st.sidebar.button("Загрузить данные", key="load_data_btn"):
-        logging.info("Нажата кнопка 'Загрузить данные'")
-        logging.info(f"  - Тренировочный файл загружен: {train_file is not None}")
-        logging.info(f"  - Файл прогноза загружен: {predict_file is not None}")
+    if st.sidebar.button("Загрузить"):
         if not train_file:
-            st.error("Тренировочный файл обязателен!")
-            logging.warning("Тренировочный файл не выбран.")
-        elif not predict_file: # Проверка на наличие predict_file
-            st.error("Файл для прогнозирования обязателен!")
-            logging.warning("Файл для прогнозирования не выбран.")
+            st.error("Train обязателен!")
+            log_warning("Пользователь не выбрал Train-файл.")
+        elif not predict_file:
+            st.error("Прогноз-файл обязателен!")
+            log_warning("Пользователь не выбрал файл для прогнозов.")
         else:
             try:
-                logging.info(f"Загрузка тренировочных данных из файла: {train_file.name}")
                 df_train = load_data(train_file)
                 st.session_state["df"] = df_train
-                st.success("Тренировочный файл успешно загружен!")
+                st.success("Train загружен!")
                 st.dataframe(df_train.head())
 
-                st.subheader("Статистика тренировочных данных")
+                st.subheader("Статистика Train")
                 show_dataset_stats(df_train)
+                log_info(f"Train-файл {train_file.name} успешно загружен ({len(df_train)} строк).")
 
-                logging.info(f"Загрузка данных для прогнозирования из файла: {predict_file.name}")
-                df_predict = load_data(predict_file) # Данные для прогнозирования теперь обязательны
+                df_predict = load_data(predict_file)
                 st.session_state["df_predict"] = df_predict
-                st.success("Файл для прогнозирования успешно загружен!")
+                st.success("Файл для прогноза загружен!")
                 st.dataframe(df_predict.head())
 
-                st.subheader("Статистика данных для прогнозирования")
+                st.subheader("Статистика (прогноз)")
                 show_dataset_stats(df_predict)
-                logging.info("Данные успешно загружены и статистика отображена.")
+                log_info(f"Файл для прогноза {predict_file.name} успешно загружен ({len(df_predict)} строк).")
 
             except Exception as e:
-                st.error(f"Ошибка загрузки данных: {e}")
-                logging.error(f"Ошибка при загрузке данных: {e}", exc_info=True)
+                st.error(f"Ошибка загрузки: {e}")
+                log_error(f"Ошибка загрузки: {e}")
 
-    # ========== 2) Настройка колонок ==========
+
+def configure_columns():
+    """
+    Настраивает выбор целевой колонки и типа задачи.
+    """
     st.sidebar.header("2. Настройка колонок")
-    df_current = st.session_state["df"]
-    if df_current is not None:
-        all_cols = list(df_current.columns)
-    else:
-        all_cols = []
+    df_cur = st.session_state.get("df")
+    all_cols = list(df_cur.columns) if df_cur is not None else []
 
-    tgt_stored = st.session_state.get("tgt_col_key", "<нет>")
-    if tgt_stored not in ["<нет>"] + all_cols:
+    if "tgt_col_key" not in st.session_state or st.session_state["tgt_col_key"] not in ["<нет>"] + all_cols:
         st.session_state["tgt_col_key"] = "<нет>"
 
     tgt_col = st.sidebar.selectbox("Целевая колонка", ["<нет>"] + all_cols, key="tgt_col_key")
-    logging.info(f"Выбрана целевая колонка: {tgt_col}")
+    log_info(f"Выбрана целевая колонка: {tgt_col}")
 
-    problem_type_options = ["auto", "binary", "multiclass", "regression"]
-    problem_type = st.sidebar.selectbox("Тип задачи", problem_type_options, index=0, key="problem_type_key")
-    logging.info(f"Выбран тип задачи: {problem_type}")
+    if "problem_type_key" not in st.session_state:
+        st.session_state["problem_type_key"] = "auto"
+    problem_options = ["auto", "binary", "multiclass", "regression"]
+    problem_type = st.sidebar.selectbox("Тип задачи", problem_options, key="problem_type_key")
+    log_info(f"Выбран тип задачи: {problem_type}")
 
-    eval_metric_options = ["auto"] + list(METRICS_DICT.keys())
-    eval_metric = st.sidebar.selectbox("Метрика оценки", eval_metric_options, index=0, key="eval_metric_key")
-    logging.info(f"Выбрана метрика оценки: {eval_metric}")
+    if "eval_metric_key" not in st.session_state:
+        st.session_state["eval_metric_key"] = "auto"
+    eval_metric_list = ["auto"] + list(METRICS_DICT.keys())
+    eval_metric = st.sidebar.selectbox("Метрика", eval_metric_list, key="eval_metric_key")
+    log_info(f"Выбрана метрика: {eval_metric}")
+
+    return tgt_col, problem_type, eval_metric
 
 
-    # ========== 3) Обработка пропущенных значений ==========
-    st.sidebar.header("3. Обработка пропущенных значений")
-    fill_options = ["None", "Constant=0", "Mean", "Median", "Mode"] # Удалены Group Mean, Forward Fill как менее релевантные для табличных данных
-    fill_method = st.sidebar.selectbox("Метод заполнения пропущенных значений", fill_options, key="fill_method_key")
-    logging.info(f"Выбран метод заполнения пропусков: {fill_method}")
-    group_cols_for_fill = [] # Группировка менее релевантна для общих табличных данных, удалена из интерфейса
+def configure_missing_and_model():
+    """
+    Настраивает параметры заполнения пропусков и конфигурацию модели.
+    """
+    st.sidebar.header("3. Обработка пропусков")
+    fill_opts = ["None", "Constant=0", "Mean", "Median", "Mode"]
+    if "fill_method_key" not in st.session_state:
+        st.session_state["fill_method_key"] = "None"
+    fill_method = st.sidebar.selectbox("Заполнение пропусков", fill_opts, key="fill_method_key")
+    log_info(f"Метод заполнения: {fill_method}")
 
-    # ========== 4) Настройки модели и обучения ==========
-    st.sidebar.header("4. Настройки модели и обучения")
+    st.sidebar.header("4. Настройки модели")
+    model_keys_list = list(AG_MODELS.keys())
+    model_choices = ["* (all)"] + model_keys_list
+    if "models_key" not in st.session_state:
+        st.session_state["models_key"] = ["* (all)"]
+    chosen_models = st.sidebar.multiselect("Модели AutoGluon", model_choices,
+                                             default=st.session_state["models_key"],
+                                             key="models_key")
+    log_info(f"Выбраны модели: {chosen_models}")
 
-    model_keys = list(AG_MODELS.keys())
-    model_choices = ["* (all)"] + model_keys
-    chosen_models = st.sidebar.multiselect(
-        "Модели AutoGluon",
-        model_choices,
-        default=st.session_state.get("models_key", ["* (all)"]),
-        key="models_key"
-    )
-    logging.info(f"Выбранные модели AutoGluon: {chosen_models}")
-
-    presets = st.sidebar.selectbox("Пресеты", PRESETS_LIST,
-                                   index=PRESETS_LIST.index(st.session_state.get("presets_key", "medium_quality")),
+    if "presets_key" not in st.session_state:
+        st.session_state["presets_key"] = "medium_quality"
+    presets = st.sidebar.selectbox("Presets", PRESETS_LIST,
+                                   index=PRESETS_LIST.index(st.session_state["presets_key"]) if st.session_state["presets_key"] in PRESETS_LIST else 0,
                                    key="presets_key")
-    logging.info(f"Выбран пресет: {presets}")
+    log_info(f"Выбран пресет: {presets}")
 
-    time_limit = st.sidebar.number_input("Лимит времени обучения (секунды)", 10, 36000, 60, key="time_limit_key")
-    logging.info(f"Установлен лимит времени обучения: {time_limit} секунд")
+    if "time_limit_key" not in st.session_state:
+        st.session_state["time_limit_key"] = 60
+    time_limit = st.sidebar.number_input("Time limit (sec)", 10, 36000, st.session_state["time_limit_key"], key="time_limit_key")
+    log_info(f"Лимит времени: {time_limit} сек")
+
+    if "auto_predict_save_checkbox" not in st.session_state:
+        st.session_state["auto_predict_save_checkbox"] = False
+    auto_predict_save = st.sidebar.checkbox("Авто-прогноз и сохранение", value=False, key="auto_predict_save_checkbox")
+    log_info(f"Флаг автопрогноза: {auto_predict_save}")
+
+    return fill_method, chosen_models, presets, time_limit, auto_predict_save
 
 
-    # ========== 5) Обучение модели ==========
-    st.sidebar.header("5. Обучение модели")
-    auto_predict_save = st.sidebar.checkbox("Прогноз и сохранение после обучения", value=False, key="auto_predict_save_checkbox") # Чекбокс для авто прогноза и сохранения
-    logging.info(f"Чекбокс 'Прогноз и сохранение после обучения' установлен: {auto_predict_save}")
-    if st.sidebar.button("Обучить модель", key="fit_model_btn"):
-        logging.info("Нажата кнопка 'Обучить модель'")
-        logging.info(f"  - Автоматический прогноз и сохранение после обучения: {auto_predict_save}")
-        logging.info(f"  - Целевая колонка: {tgt_col}")
-        logging.info(f"  - Тип задачи: {problem_type}")
-        logging.info(f"  - Метрика оценки: {eval_metric}")
-        logging.info(f"  - Метод заполнения пропусков: {fill_method}")
-        logging.info(f"  - Выбранные модели: {chosen_models}")
-        logging.info(f"  - Пресет: {presets}")
-        logging.info(f"  - Лимит времени: {time_limit}")
+def initialize_session_state():
+    """
+    Инициализирует переменные st.session_state, если они не существуют.
+    """
+    for key in ["df", "df_predict", "predictor", "leaderboard", "predictions", "fit_summary", "feature_importance", "ensemble_info"]:
+        if key not in st.session_state:
+            st.session_state[key] = None
 
-        df_train = st.session_state.get("df")
-        if df_train is None:
-            st.warning("Пожалуйста, загрузите тренировочные данные сначала!")
+
+def train_model_section(tgt_col, problem_type, eval_metric, fill_method, chosen_models, presets, time_limit, auto_predict_save):
+    """
+    Обучает модель AutoGluon и обновляет состояние с результатами.
+    """
+    st.sidebar.header("5. Обучение")
+    if st.sidebar.button("Обучить модель"):
+        df_tr = st.session_state.get("df")
+        if df_tr is None:
+            st.warning("Train не загружен!")
+            log_warning("Попытка обучения без Train.")
         elif tgt_col == "<нет>":
-            st.error("Пожалуйста, выберите целевую колонку!")
+            st.error("Целевая колонка не выбрана!")
+            log_warning("Обучение невозможно: tgt_col='<нет>'")
         else:
             try:
+                log_info("Удаляем старые модели из AutogluonModels...")
                 shutil.rmtree("AutogluonModels", ignore_errors=True)
-                logging.info("Обучение модели: предыдущие модели удалены из AutogluonModels.")
 
-                fill_method_val = st.session_state.get("fill_method_key", "None")
-                group_cols_val = st.session_state.get("group_cols_for_fill_key", []) # Не используется в интерфейсе больше
-                chosen_metric_val = st.session_state.get("eval_metric_key")
-                chosen_models_val = st.session_state.get("models_key")
-                presets_val = st.session_state.get("presets_key", "medium_quality")
-                t_limit = st.session_state.get("time_limit_key", 60)
-                problem_type_val = st.session_state.get("problem_type_key")
+                chosen_metric_val = eval_metric if eval_metric != "auto" else None
+                log_info(f"Начинаем обучение (metric={chosen_metric_val}, time_limit={time_limit}, presets={presets}, models={chosen_models})")
 
-                logging.info(f"Параметры обучения: Целевая колонка={tgt_col}, Тип задачи={problem_type_val}, Метрика={chosen_metric_val}, Метод заполнения пропусков={fill_method_val}, Пресеты={presets_val}, Лимит времени={t_limit}, Выбранные модели={chosen_models_val}")
+                df_ready = df_tr.copy()
+                df_ready = fill_missing_values(df_ready, fill_method)
 
-
-                df2 = df_train.copy()
-                df2 = fill_missing_values(df2, fill_method_val) # Групповые колонки удалены
-                logging.info("Пропущенные значения заполнены.")
-
-                hyperparameters = None
                 all_models_opt = "* (all)"
-                if (len(chosen_models_val) == 1 and chosen_models_val[0] == all_models_opt) or len(chosen_models_val) == 0:
-                    hyperparameters = None
+                if (len(chosen_models) == 1 and chosen_models[0] == all_models_opt) or (len(chosen_models) == 0):
+                    hyperparams = None
                 else:
-                    no_star = [m for m in chosen_models_val if m != all_models_opt]
-                    hyperparameters = {m: {} for m in no_star}
-
-                eval_key = chosen_metric_val if chosen_metric_val != "auto" else None
+                    no_star = [m for m in chosen_models if m != all_models_opt]
+                    hyperparams = {m: {} for m in no_star}
 
                 predictor = TabularPredictor(
                     label=tgt_col,
-                    problem_type=problem_type_val if problem_type_val != "auto" else None,
-                    eval_metric=eval_key,
+                    problem_type=problem_type if problem_type != "auto" else None,
+                    eval_metric=chosen_metric_val,
                     path=MODEL_DIR
-                )
-
-                st.info("Обучение модели...")
-                logging.info("Начало обучения модели...")
-                predictor.fit(
-                    train_data=df2,
-                    time_limit=t_limit,
-                    presets=presets_val,
-                    hyperparameters=hyperparameters
+                ).fit(
+                    train_data=df_ready,
+                    time_limit=time_limit,
+                    presets=presets,
+                    hyperparameters=hyperparams
                 )
 
                 st.session_state["predictor"] = predictor
-                st.success("Модель успешно обучена!")
-                logging.info("Модель успешно обучена.")
+                st.success("Модель обучена!")
+                log_info("Модель успешно обучена.")
 
-                lb = predictor.leaderboard(df2)
+                lb = predictor.leaderboard(df_ready)
                 st.session_state["leaderboard"] = lb
-                st.subheader("Таблица лидеров")
+                st.subheader("Лидерборд")
                 st.dataframe(lb)
-                logging.info("Таблица лидеров отображена.")
+                log_info(f"Лидерборд:\n{lb}")
 
-                summ = predictor.fit_summary()
-                st.session_state["fit_summary"] = summ
+                fsumm = predictor.fit_summary()
+                st.session_state["fit_summary"] = fsumm
+                with st.expander("Fit Summary"):
+                    display_fit_summary(fsumm)
+
+                fi = predictor.feature_importance(df_ready)
+                st.session_state["feature_importance"] = fi
+                st.subheader("Важность признаков")
+                st.dataframe(fi)
+                log_info(f"Feature Importance:\n{fi}")
 
                 if not lb.empty:
                     best_model = lb.iloc[0]["model"]
                     best_score = lb.iloc[0]["score_val"]
-                    st.session_state["best_model_name"] = best_model
-                    st.session_state["best_model_score"] = best_score
-                    st.info(f"Лучшая модель: {best_model}, score_val={best_score:.4f}")
-                    logging.info(f"Лучшая модель: {best_model}, score_val={best_score:.4f}")
+                    st.info(f"Лучшая модель: {best_model}, score={best_score:.4f}")
+                    log_info(f"Лучшая модель: {best_model} (score={best_score:.4f})")
 
-                with st.expander("Резюме обучения"):
-                    display_fit_summary(summ) # Используем улучшенное отображение резюме
-                logging.info("Резюме обучения отображено.")
-
-                # Важность признаков
-                feature_importance = predictor.feature_importance(df2) # Данные обучения используются для важности признаков
-                st.session_state["feature_importance"] = feature_importance
-                st.subheader("Важность признаков")
-                st.dataframe(feature_importance)
-                logging.info("Важность признаков отображена.")
-
+                    ens_df = extract_ensemble_info(predictor, best_model)
+                    if ens_df is not None:
+                        st.session_state["ensemble_info"] = ens_df
+                        st.write("### Состав WeightedEnsemble")
+                        st.dataframe(ens_df)
+                        log_info(f"Ансамбль WeightedEnsemble:\n{ens_df}")
 
                 save_model_metadata(
-                    tgt_col, problem_type_val, eval_key,
-                    fill_method_val, group_cols_val, # Групповые колонки удалены из интерфейса
-                    presets_val, chosen_models_val
+                    col_target=tgt_col,
+                    problem_type=problem_type,
+                    eval_metric=chosen_metric_val,
+                    fill_method=fill_method,
+                    group_cols=[],  # Группировочные колонки не настраиваются в UI
+                    presets=presets,
+                    chosen_models=chosen_models
                 )
 
-                if auto_predict_save: # Автоматический запуск прогноза и сохранения если чекбокс выбран
-                    st.info("Автоматически запускаем прогноз и сохранение результатов...")
-                    logging.info("Автоматически запускаем прогноз и сохранение результатов, так как чекбокс установлен.")
-                    # Запускаем прогноз
-                    predictor = st.session_state.get("predictor")
-                    df_predict = st.session_state.get("df_predict")
-
-                    if predictor is not None and df_predict is not None:
+                # Автопрогноз
+                if auto_predict_save:
+                    st.info("Автоматический прогноз + Excel для скачивания...")
+                    df_fore = st.session_state.get("df_predict")
+                    if df_fore is None:
+                        st.warning("Нет данных для прогноза!")
+                        log_warning("Автопрогноз невозможен: df_predict=None")
+                    else:
                         try:
-                            st.subheader("Прогноз на данных для прогнозирования")
-                            df_pred = df_predict.copy()
-                            df_pred = fill_missing_values(
-                                df_pred,
-                                st.session_state.get("fill_method_key", "None")
+                            dff_ = df_fore.copy()
+                            dff_ = fill_missing_values(dff_, fill_method)
+                            preds = predictor.predict(dff_)
+                            if isinstance(preds, pd.Series):
+                                preds = preds.to_frame("prediction")
+                            out_df = pd.concat([dff_.reset_index(drop=True), preds.reset_index(drop=True)], axis=1)
+                            st.dataframe(out_df.head())
+
+                            excel_buf = generate_excel_buffer(out_df, lb, fi, st.session_state.get("ensemble_info"))
+                            st.download_button(
+                                label="Скачать Excel (авто)",
+                                data=excel_buf.getvalue(),
+                                file_name="results.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             )
-                            st.session_state["df_predict"] = df_pred
-                            predictions = predict_tabular(predictor, df_pred)
-                            st.session_state["predictions"] = predictions
+                            st.success("Файл Excel можно скачать.")
+                            log_info("Автопрогноз: Excel сформирован, пользователь может скачать.")
 
-                            st.subheader("Предсказанные значения (первые строки)")
-                            # Обработка случая, когда predictions является Series
-                            if isinstance(predictions, pd.Series):
-                                prediction_col_name = 'prediction'  # Даем столбцу предсказаний имя по умолчанию
-                                predictions = predictions.to_frame(name=prediction_col_name) # Преобразуем Series в DataFrame
-                            else: # predictions это DataFrame
-                                prediction_col_name = predictions.columns[0] # Предполагаем, что колонка предсказаний - первая (и единственная)
-                            # Объединяем данные для прогнозирования с **только колонкой предсказаний**
-                            output_df = pd.concat([df_predict.reset_index(drop=True), predictions.reset_index(drop=True)[[prediction_col_name]]], axis=1) # Объединяем только колонку предсказаний
-                            st.dataframe(output_df.head())
-                            logging.info("Автоматический прогноз успешно выполнен и отображен.")
+                        except Exception as ax:
+                            st.error(f"Ошибка автопрогноза: {ax}")
+                            log_error(f"Ошибка автопрогноза: {ax}")
+
+            except Exception as ex_:
+                st.error(f"Ошибка обучения: {ex_}")
+                log_error(f"Ошибка обучения: {ex_}")
 
 
-                        except Exception as ex_pred:
-                            st.error(f"Ошибка прогноза при автоматическом запуске: {ex_pred}")
-                            logging.error(f"Ошибка прогноза при автоматическом запуске: {ex_pred}", exc_info=True)
-                        else: # Если прогноз успешен, запускаем сохранение
-                            try:
-                                save_path = st.session_state.get("save_path_key", "results.xlsx")
-                                df_predict_to_save = st.session_state.get("df_predict") # Только df_predict теперь
-                                lb_to_save = st.session_state.get("leaderboard")
-                                preds_to_save = st.session_state.get("predictions")
-                                feature_importance_to_save = st.session_state.get("feature_importance") # Важность признаков
-
-                                with pd.ExcelWriter(save_path, engine="openpyxl") as writer:
-
-                                    if df_predict_to_save is not None: # Сохранение df_predict с предсказаниями
-                                        output_df_save = pd.concat([df_predict_to_save.reset_index(drop=True), preds_to_save.reset_index(drop=True)], axis=1)
-                                        output_df_save.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
-                                    if lb_to_save is not None:
-                                        lb_to_save.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
-                                    if feature_importance_to_save is not None: # Сохранение важности признаков
-                                        feature_importance_to_save.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
-
-
-                                    if lb_to_save is not None and not lb_to_save.empty:
-                                        workbook = writer.book
-                                        sheet = writer.sheets["ТаблицаЛидеров"]
-                                        best_idx = lb_to_save.iloc[0].name
-                                        best_model_name = lb_to_save.iloc[0]["model"]
-                                        best_score = lb_to_save.iloc[0]["score_val"]
-
-                                        fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-                                        row_excel = best_idx + 2
-                                        for col_idx in range(1, lb_to_save.shape[1] + 1):
-                                            cell = sheet.cell(row=row_excel, column=col_idx)
-                                            cell.fill = fill_green
-
-                                        explanation_row = lb_to_save.shape[0] + 3
-                                        explanation = (
-                                            f"Лучшая модель: {best_model_name}\n"
-                                            f"Причина: минимальный score_val = {best_score:.4f}"
-                                        )
-                                        sheet.cell(row=explanation_row, column=1).value = explanation
-
-                                st.success(f"Результаты автоматически сохранены в {save_path}")
-                                logging.info(f"Результаты автоматически сохранены в Excel файл: {save_path}")
-                            except Exception as ex_save:
-                                st.error(f"Ошибка сохранения результатов при автоматическом запуске: {ex_save}")
-                                logging.info(f"Ошибка сохранения результатов при автоматическом запуске: {ex_save}", exc_info=True)
-
-            except Exception as ex:
-                st.error(f"Ошибка во время обучения: {ex}")
-                logging.info(f"Ошибка во время обучения: {ex}", exc_info=True)
-
-    # ========== 6) Прогноз ==========
-    st.sidebar.header("6. Прогноз")
-    if st.sidebar.button("Сделать прогноз", key="predict_btn"):
-        logging.info("Нажата кнопка 'Сделать прогноз'")
+def manual_prediction_section(tgt_col):
+    """
+    Выполняет ручной прогноз.
+    """
+    st.sidebar.header("6. Прогноз вручную")
+    if st.sidebar.button("Сделать прогноз"):
         predictor = st.session_state.get("predictor")
         if predictor is None:
-            st.warning("Сначала обучите модель или загрузите уже существующую!")
-            logging.warning("Прогноз: модель не обучена или не загружена.")
+            st.warning("Сначала обучите модель!")
+            log_warning("Нельзя прогнозировать: predictor=None.")
         elif tgt_col == "<нет>":
-            st.error("Пожалуйста, выберите целевую колонку в разделе '2. Настройка колонок'!")
-            logging.warning("Прогноз: целевая колонка не выбрана.")
+            st.error("Целевая колонка не выбрана.")
+            log_warning("Нельзя прогнозировать: tgt_col='<нет>'.")
         else:
-            df_predict = st.session_state.get("df_predict")
-
-
-            if df_predict is None: # df_predict теперь обязателен
-                st.error("Файл для прогнозирования обязателен. Пожалуйста, загрузите файл данных для прогнозирования.")
-                logging.warning("Прогноз: файл для прогнозирования не загружен.")
+            df_fore = st.session_state.get("df_predict")
+            if df_fore is None:
+                st.error("Нет файла для прогноза!")
+                log_warning("Нельзя прогнозировать: df_predict=None.")
             else:
                 try:
-
-                    st.subheader("Прогноз на данных для прогнозирования")
-                    df_pred = df_predict.copy()
-
-                    df_pred = fill_missing_values(
-                        df_pred,
-                        st.session_state.get("fill_method_key", "None")
-                    )
-                    logging.info("Пропущенные значения в данных для прогноза заполнены.")
-
-                    st.session_state["df_predict"] = df_pred
-
-                    logging.info("Запуск прогноза...")
-                    predictions = predict_tabular(predictor, df_pred)
-                    st.session_state["predictions"] = predictions
-                    logging.info("Прогноз успешно выполнен.")
-
+                    fmethod = st.session_state["fill_method_key"]
+                    df_fore_ = df_fore.copy()
+                    df_fore_ = fill_missing_values(df_fore_, fmethod)
+                    preds = predictor.predict(df_fore_)
+                    if isinstance(preds, pd.Series):
+                        preds = preds.to_frame("prediction")
+                    out_ = pd.concat([df_fore_.reset_index(drop=True), preds.reset_index(drop=True)], axis=1)
+                    st.session_state["predictions"] = out_
                     st.subheader("Предсказанные значения (первые строки)")
-                    # Обработка случая, когда predictions является Series
-                    if isinstance(predictions, pd.Series):
-                        prediction_col_name = 'prediction'  # Даем столбцу предсказаний имя по умолчанию
-                        predictions = predictions.to_frame(name=prediction_col_name) # Преобразуем Series в DataFrame
-                    else: # predictions это DataFrame
-                        prediction_col_name = predictions.columns[0] # Предполагаем, что колонка предсказаний - первая (и единственная)
-                    # Объединяем данные для прогнозирования с **только колонкой предсказаний**
-                    output_df = pd.concat([df_predict.reset_index(drop=True), predictions.reset_index(drop=True)[[prediction_col_name]]], axis=1) # Объединяем только колонку предсказаний
-                    st.dataframe(output_df.head()) # Отображаем объединенный датафрейм
-                    logging.info("Предсказанные значения отображены.")
+                    st.dataframe(out_.head())
+                    log_info(f"Ручной прогноз выполнен, первые строки:\n{out_.head(5)}")
 
-                    # Важность признаков после прогноза, если есть
-                    feature_importance = st.session_state.get("feature_importance")
-                    if feature_importance is not None:
-                        with st.expander("Важность признаков (Сохраненная)"): # Выводим сохраненную важность признаков после прогноза
-                            st.dataframe(feature_importance)
-                            logging.info("Важность признаков (сохраненная) отображена в выпадающем списке.")
+                    if st.session_state.get("ensemble_info") is not None:
+                        st.write("Состав WeightedEnsemble:")
+                        st.dataframe(st.session_state["ensemble_info"])
+
+                except Exception as xp:
+                    st.error(f"Ошибка прогноза: {xp}")
+                    log_error(f"Ошибка прогноза: {xp}")
 
 
-                    best_name = st.session_state.get("best_model_name", None)
-                    best_score = st.session_state.get("best_model_score", None)
-                    if best_name is not None:
-                        st.info(f"Лучшая модель при обучении была: {best_name}, score_val={best_score:.4f}")
-                        logging.info(f"Информация о лучшей модели отображена: {best_name}, score_val={best_score:.4f}")
-
-                except Exception as ex:
-                    st.error(f"Ошибка прогноза: {ex}")
-                    logging.info(f"Ошибка прогноза: {ex}", exc_info=True)
-
-    # ========== 7) Сохранение результатов (Excel) ==========
+def save_results_section():
+    """
+    Обеспечивает сохранение результатов в CSV и Excel.
+    """
     st.sidebar.header("7. Сохранение результатов")
-    save_path = st.sidebar.text_input("Имя файла Excel", "results.xlsx", key="save_path_key")
-    logging.info(f"Установлено имя файла для сохранения результатов: {save_path}")
-    if st.sidebar.button("Сохранить результаты в Excel", key="save_btn"):
-        logging.info("Нажата кнопка 'Сохранить результаты в Excel'")
-        logging.info(f"  - Имя файла для сохранения: {save_path}")
-        try:
-            df_predict = st.session_state.get("df_predict") # Только df_predict теперь
-            lb = st.session_state.get("leaderboard")
-            preds = st.session_state.get("predictions")
-            feature_importance = st.session_state.get("feature_importance") # Важность признаков
-
-            with pd.ExcelWriter(save_path, engine="openpyxl") as writer:
-
-                if df_predict is not None: # Сохранение df_predict с предсказаниями
-                    output_df = pd.concat([df_predict.reset_index(drop=True), preds.reset_index(drop=True)], axis=1)
-                    output_df.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
-                    logging.info("Лист 'РезультатыПрогноза' сохранен в Excel.")
-                if lb is not None:
-                    lb.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
-                    logging.info("Лист 'ТаблицаЛидеров' сохранен в Excel.")
-                if feature_importance is not None: # Сохранение важности признаков
-                    feature_importance.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
-                    logging.info("Лист 'ВажностьПризнаков' сохранен в Excel.")
-
-
-                if lb is not None and not lb.empty:
-                    workbook = writer.book
-                    sheet = writer.sheets["ТаблицаЛидеров"]
-                    best_idx = lb.iloc[0].name
-                    best_model_name = lb.iloc[0]["model"]
-                    best_score = lb.iloc[0]["score_val"]
-
-                    fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-                    row_excel = best_idx + 2
-                    for col_idx in range(1, lb.shape[1] + 1):
-                        cell = sheet.cell(row=row_excel, column=col_idx)
-                        cell.fill = fill_green
-
-                    explanation_row = lb.shape[0] + 3
-                    explanation = (
-                        f"Лучшая модель: {best_model_name}\n"
-                        f"Причина: минимальный score_val = {best_score:.4f}"
-                    )
-                    sheet.cell(row=explanation_row, column=1).value = explanation
-                    logging.info("Форматирование и пояснение для лучшей модели добавлены в лист 'ТаблицаЛидеров'.")
-
-            st.success(f"Результаты сохранены в {save_path}")
-        except Exception as ex:
-            st.error(f"Ошибка сохранения результатов: {ex}")
-            logging.info(f"Ошибка сохранения результатов в Excel: {ex}", exc_info=True)
-
-    # ========== 8) Логи приложения ==========
-    st.sidebar.header("8. Логи приложения")
-    if st.sidebar.button("Показать логи", key="show_logs_btn"):
-        logging.info("Нажата кнопка 'Показать логи'")
-        logs_ = read_logs()
-        st.subheader("Логи")
-        st.text(logs_)
-        logging.info("Логи приложения отображены на экране.")
-
-    if st.sidebar.button("Скачать логи в текстовый файл", key="download_logs_btn"):
-        logging.info("Нажата кнопка 'Скачать логи в текстовый файл'")
-        try:
-            with open(LOG_FILE, "r", encoding='utf-8') as f:
-                log_content = f.read()
+    if st.sidebar.button("Сохранить в CSV"):
+        final_preds = st.session_state.get("predictions")
+        if final_preds is None:
+            st.warning("Сделайте прогноз (predictions=None).")
+            log_warning("Нельзя сохранить CSV: нет 'predictions'.")
+        else:
+            csv_data = final_preds.to_csv(index=False, encoding="utf-8-sig")
             st.download_button(
-                label="Скачать логи",
-                data=log_content,
-                file_name="app_logs.txt",
-                mime="text/plain"
+                label="Скачать CSV",
+                data=csv_data,
+                file_name="results.csv",
+                mime="text/csv"
             )
-            logging.info("Кнопка скачивания логов отображена.")
-        except Exception as e:
-            st.error(f"Ошибка при подготовке логов к скачиванию: {e}")
-            logging.error(f"Ошибка при подготовке логов к скачиванию: {e}", exc_info=True)
+            log_info("Пользователь может скачать results.csv")
+
+    if st.sidebar.button("Сохранить в Excel"):
+        final_preds = st.session_state.get("predictions")
+        lb = st.session_state.get("leaderboard")
+        fi = st.session_state.get("feature_importance")
+        en_df = st.session_state.get("ensemble_info")
+        if final_preds is None:
+            st.warning("Сделайте прогноз (predictions=None).")
+            log_warning("Нельзя сохранить Excel: нет 'predictions'.")
+        else:
+            excel_buf = generate_excel_buffer(final_preds, lb, fi, en_df)
+            st.download_button(
+                label="Скачать Excel",
+                data=excel_buf.getvalue(),
+                file_name="results.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            log_info("Пользователь может скачать results.xlsx (ручной)")
 
 
-    # ========== 9) Загрузка моделей и логов ==========
-    st.sidebar.header("9. Загрузка моделей и логов")
-    if st.sidebar.button("Download AutogluonModels Content", key="download_model_and_logs"):
-        logging.info("Нажата кнопка 'Download AutogluonModels Content'")
+def logs_section():
+    """
+    Отображает и позволяет скачивать логи приложения.
+    """
+    st.sidebar.header("8. Логи приложения")
+    if st.sidebar.button("Показать логи"):
+        logs_ = read_logs()
+        st.subheader("Лог-файл (app.log)")
+        st.text(logs_)
+
+    if st.sidebar.button("Скачать логи"):
+        logs_ = read_logs()
+        st.download_button(
+            label="Скачать app.log",
+            data=logs_,
+            file_name="app.log",
+            mime="text/plain"
+        )
+
+
+def download_archive_section():
+    """
+    Создает и предоставляет архив с моделями и логами.
+    """
+    st.sidebar.header("9. Скачать модели + логи")
+    if st.sidebar.button("Скачать архив (модели+логи)"):
         if not os.path.exists("AutogluonModels"):
-            st.error("Папка 'AutogluonModels' не найдена. Сначала обучите модель.")
-            logging.warning("Папка 'AutogluonModels' не найдена, невозможно скачивание.")
+            st.error("Папка AutogluonModels не найдена.")
+            log_warning("Нет AutogluonModels => архив скачать нельзя.")
         else:
             try:
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                zip_buf = io.BytesIO()
+                with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
                     for root, dirs, files in os.walk("AutogluonModels"):
                         for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, start="AutogluonModels")
-                            zipf.write(file_path, arcname=arcname)
-                zip_buffer.seek(0)
+                            full_path = os.path.join(root, file)
+                            arcname = os.path.relpath(full_path, start="AutogluonModels")
+                            zf.write(full_path, arcname)
+                    if os.path.exists(LOG_FILE):
+                        zf.write(LOG_FILE, arcname="app.log")
 
+                zip_buf.seek(0)
                 st.download_button(
-                    label="Скачать архив (Модели и логи)",
-                    data=zip_buffer,
-                    file_name="AutogluonModels.zip",
+                    label="Скачать models_and_logs.zip",
+                    data=zip_buf.getvalue(),
+                    file_name="models_and_logs.zip",
                     mime="application/zip"
                 )
-                st.info("Содержимое папки AutogluonModels архивировано и готово к скачиванию.")
-                logging.info("Папка 'AutogluonModels' архивирована и предложена для скачивания.")
+                log_info("Пользователь может скачать models_and_logs.zip")
+            except Exception as e_:
+                st.error(f"Ошибка архивации: {e_}")
+                log_error(f"Ошибка архивации: {e_}")
 
-            except Exception as e:
-                st.error(f"Ошибка при архивации и подготовке к скачиванию: {e}")
-                logging.error(f"Ошибка при архивации папки 'AutogluonModels': {e}", exc_info=True)
+
+def main():
+    # Инициализация логгера
+    setup_logger(debug=False)
+    log_info("=== Запуск приложения (Tabular) в режиме INFO ===")
+
+    # Пытаемся загрузить существующую модель
+    if "predictor" not in st.session_state or st.session_state["predictor"] is None:
+        try_load_existing_model()
+
+    # Навигация по страницам
+    pages = ["Главная", "Help"]
+    choice = st.sidebar.selectbox("Навигация", pages)
+    if choice == "Help":
+        show_help_page()
+        return
+
+    st.title("Бизнес-приложение для прогнозирования табличных данных. Версия 1.0")
+
+    # Инициализация переменных состояния
+    initialize_session_state()
+
+    # Вызов функций для обработки каждой секции
+    upload_data()
+    tgt_col, problem_type, eval_metric = configure_columns()
+    fill_method, chosen_models, presets, time_limit, auto_predict_save = configure_missing_and_model()
+    train_model_section(tgt_col, problem_type, eval_metric, fill_method, chosen_models, presets, time_limit, auto_predict_save)
+    manual_prediction_section(tgt_col)
+    save_results_section()
+    logs_section()
+    clear_logs()
+    download_archive_section()
 
 
 if __name__ == "__main__":
     main()
+

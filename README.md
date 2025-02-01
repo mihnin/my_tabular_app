@@ -23,7 +23,7 @@
 
    С использованием `conda`:
    ```bash
-   conda create --name my_tabular_app python=3.8
+   conda create --name my_tabular_app python=3.10
    conda activate my_tabular_app
    ```
 

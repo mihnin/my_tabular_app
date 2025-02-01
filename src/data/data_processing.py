@@ -3,8 +3,11 @@ import logging
 import streamlit as st
 from pathlib import Path
 
+
 def load_data(uploaded_file: st.runtime.uploaded_file_manager.UploadedFile) -> pd.DataFrame:
-    """Загружает данные из CSV/Excel файла с валидацией и обработкой ошибок."""
+    """
+    Загружает данные из CSV или Excel файла с проверкой и обработкой ошибок.
+    """
     if not uploaded_file:
         logging.error("Попытка загрузки без выбора файла")
         raise ValueError("Ошибка: Файл не выбран!")
@@ -15,14 +18,14 @@ def load_data(uploaded_file: st.runtime.uploaded_file_manager.UploadedFile) -> p
     try:
         if file_ext == '.csv':
             with st.spinner("Чтение CSV файла..."):
-                df = pd.read_csv(uploaded_file, encoding='utf-8-sig') # Явно указана кодировка utf-8-sig
+                df = pd.read_csv(uploaded_file, encoding='utf-8-sig')
         elif file_ext in ('.xls', '.xlsx'):
             with st.spinner("Чтение Excel файла..."):
                 df = pd.read_excel(uploaded_file)
         else:
             raise ValueError(f"Неподдерживаемый формат файла: {file_ext}")
-   
-        if df.empty: # <---- Добавлена проверка на пустой DataFrame
+
+        if df.empty:
             logging.warning(f"Файл {uploaded_file.name} загружен, но DataFrame оказался пустым.")
             raise ValueError(f"Файл '{uploaded_file.name}' загружен, но не содержит данных или данные не распознаны. Проверьте содержимое файла.")
 
@@ -30,18 +33,16 @@ def load_data(uploaded_file: st.runtime.uploaded_file_manager.UploadedFile) -> p
         return df
 
     except pd.errors.ParserError as e:
-        logging.error(f"Ошибка парсинга файла: {uploaded_file.name}. Ошибка: {str(e)}") # <--- добавлено имя файла в логирование
+        logging.error(f"Ошибка парсинга файла: {uploaded_file.name}. Ошибка: {str(e)}")
         raise ValueError(f"Ошибка чтения файла '{uploaded_file.name}': {e}")
     except Exception as e:
-        logging.error(f"Критическая ошибка при загрузке файла: {uploaded_file.name}. Ошибка: {str(e)}") # <--- добавлено имя файла в логирование
+        logging.error(f"Критическая ошибка при загрузке файла: {uploaded_file.name}. Ошибка: {str(e)}")
         raise ValueError(f"Ошибка загрузки файла '{uploaded_file.name}': {str(e)}")
 
 
 def show_dataset_stats(df: pd.DataFrame):
     """
-    Выводит в Streamlit простую статистику:
-      - describe() (min, max, mean, std)
-      - количество пропусков (NaN)
+    Отображает простую статистику DataFrame: describe и количество пропусков.
     """
     st.write("**Основная статистика для числовых столбцов**:")
     numerical_df = df.select_dtypes(include=[float, int])
@@ -56,3 +57,4 @@ def show_dataset_stats(df: pd.DataFrame):
         st.write(missing_info)
     else:
         st.info("Пропуски в данных не найдены.")
+
