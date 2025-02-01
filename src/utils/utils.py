@@ -6,28 +6,31 @@ from logging.handlers import RotatingFileHandler
 
 LOG_FILE = "logs/app.log"
 
-# --- Функции для быстрого логирования ---
+
 def log_info(msg: str):
     """Лог на уровне INFO."""
     logger = logging.getLogger()
     logger.info(msg)
+
 
 def log_warning(msg: str):
     """Лог на уровне WARNING."""
     logger = logging.getLogger()
     logger.warning(msg)
 
+
 def log_error(msg: str):
     """Лог на уровне ERROR."""
     logger = logging.getLogger()
     logger.error(msg)
+
 
 def log_debug(msg: str):
     """Лог на уровне DEBUG."""
     logger = logging.getLogger()
     logger.debug(msg)
 
-# Основная настройка логгера
+
 def setup_logger(debug: bool = False):
     """
     Инициализирует логгер для приложения.
@@ -38,12 +41,9 @@ def setup_logger(debug: bool = False):
         os.makedirs("logs")
 
     logger = logging.getLogger()
-    logger.handlers = []  # Удалим все старые хендлеры
+    logger.handlers = []  # Удаляем все старые хендлеры
 
-    if debug:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
     formatter = logging.Formatter(
         "%(asctime)s [%(levelname)s] %(module)s.%(funcName)s - %(message)s",
@@ -65,10 +65,11 @@ def setup_logger(debug: bool = False):
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    # Если нужно: подробные логи AutoGluon
+    # Пример настройки подробных логов для AutoGluon (при необходимости)
     # logging.getLogger("autogluon").setLevel(logging.DEBUG)
     # logging.getLogger("autogluon.core").setLevel(logging.DEBUG)
     # logging.getLogger("autogluon.tabular").setLevel(logging.DEBUG)
+
 
 def read_logs() -> str:
     """
@@ -91,3 +92,4 @@ def read_logs() -> str:
 
         with open(LOG_FILE, "r", encoding='utf-8') as f:
             return f.read()
+

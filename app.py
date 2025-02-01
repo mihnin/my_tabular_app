@@ -1,23 +1,23 @@
 # app.py
-import streamlit as st
-import plotly.express as px
-import pandas as pd
-import shutil
-import yaml
 import os
-import json
 import io
+import json
+import logging
+import shutil
 import zipfile
+from pathlib import Path
 
-from autogluon.tabular import TabularPredictor
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import yaml
 from openpyxl.styles import PatternFill
+from autogluon.tabular import TabularPredictor
 
 # Локальные модули
 from src.data.data_processing import load_data, show_dataset_stats
 from src.features.feature_engineering import fill_missing_values
-from src.models.prediction import predict_tabular
-
-# Теперь берём функции для логов из utils:
+from src.models.prediction import predict_tabular  # Предполагается, что этот модуль существует
 from src.utils.utils import (
     setup_logger,
     read_logs,
@@ -33,7 +33,9 @@ CONFIG_PATH = "config/config.yaml"
 MODEL_DIR = "AutogluonModels/TabularModel"
 MODEL_INFO_FILE = "model_info.json"
 
+
 def load_config(path: str):
+    """Загружает конфигурацию из YAML файла."""
     if not os.path.exists(path):
         log_error(f"Файл конфигурации {path} не найден.")
         raise FileNotFoundError(f"Файл конфигурации {path} не найден.")
@@ -45,11 +47,14 @@ def load_config(path: str):
     log_info(f"Конфигурация загружена из: {path}")
     return metrics_dict, ag_models, presets_list
 
+
 METRICS_DICT, AG_MODELS, PRESETS_LIST = load_config(CONFIG_PATH)
 
 
-def save_model_metadata(col_target, problem_type, eval_metric,
-                        fill_method, group_cols, presets, chosen_models):
+def save_model_metadata(col_target, problem_type, eval_metric, fill_method, group_cols, presets, chosen_models):
+    """
+    Сохраняет метаданные модели в JSON файл.
+    """
     os.makedirs(MODEL_DIR, exist_ok=True)
     info_dict = {
         "целевая_колонка": col_target,
@@ -65,7 +70,11 @@ def save_model_metadata(col_target, problem_type, eval_metric,
         json.dump(info_dict, f, ensure_ascii=False, indent=2)
     log_info(f"Настройки модели сохранены: {path_json}")
 
+
 def load_model_metadata():
+    """
+    Загружает метаданные модели из JSON файла.
+    """
     path_json = os.path.join(MODEL_DIR, MODEL_INFO_FILE)
     if not os.path.exists(path_json):
         log_info("model_info.json не найден, пропускаем автозагрузку.")
@@ -77,7 +86,11 @@ def load_model_metadata():
         log_error(f"Ошибка чтения model_info.json: {e}")
         return None
 
+
 def try_load_existing_model():
+    """
+    Пытается загрузить существующую модель из MODEL_DIR.
+    """
     if not os.path.exists(MODEL_DIR):
         log_info("Папка модели не найдена, пропускаем автозагрузку.")
         return
@@ -100,7 +113,11 @@ def try_load_existing_model():
         st.warning(f"Не удалось загрузить модель: {e}")
         log_warning(f"Не удалось загрузить модель: {e}")
 
-def display_fit_summary(fit_summary):
+
+def display_fit_summary(fit_summary: dict):
+    """
+    Отображает сводную информацию о процессе обучения.
+    """
     if fit_summary is None:
         st.warning("fit_summary отсутствует.")
         return
@@ -141,7 +158,11 @@ def display_fit_summary(fit_summary):
     else:
         st.write("Нет гиперпараметров.")
 
+
 def extract_ensemble_info(predictor, best_model_name: str):
+    """
+    Извлекает информацию об ансамбле, если лучшая модель является WeightedEnsemble.
+    """
     if not best_model_name.startswith("WeightedEnsemble"):
         return None
     info = predictor.info()
@@ -152,38 +173,76 @@ def extract_ensemble_info(predictor, best_model_name: str):
     children = child_info.get("child_model_names", [])
     if not weights or not children:
         return None
-    data = []
-    for c, w in zip(children, weights):
-        data.append({"Model": c, "Weight": w})
+    data = [{"Model": c, "Weight": w} for c, w in zip(children, weights)]
     return pd.DataFrame(data)
 
-def main():
-    # Используем логгер (по умолчанию INFO, можно debug=True при нужде)
-    setup_logger(debug=False)
-    log_info("=== Запуск приложения (Tabular) в режиме INFO ===")
 
-    # Попробуем загрузить модель
-    if "predictor" not in st.session_state or st.session_state["predictor"] is None:
-        try_load_existing_model()
+def generate_excel_buffer(preds_df: pd.DataFrame, lb: pd.DataFrame = None,
+                            fi: pd.DataFrame = None, ensemble_info: pd.DataFrame = None) -> io.BytesIO:
+    """
+    Генерирует буфер Excel с результатами прогноза, лидербордом, важностью признаков и информацией об ансамбле.
+    """
+    excel_buf = io.BytesIO()
+    with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
+        preds_df.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
+        if lb is not None:
+            lb.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
+            if not lb.empty:
+                sheet_lb = writer.sheets["ТаблицаЛидеров"]
+                best_idx = lb.iloc[0].name
+                fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                row_excel = best_idx + 2
+                for col_idx in range(1, lb.shape[1] + 1):
+                    cell = sheet_lb.cell(row=row_excel, column=col_idx)
+                    cell.fill = fill_green
+        if fi is not None:
+            fi.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
+        if ensemble_info is not None:
+            ensemble_info.to_excel(writer, sheet_name="EnsembleInfo", index=False)
+    excel_buf.seek(0)
+    return excel_buf
 
-    pages = ["Главная", "Help"]
-    choice = st.sidebar.selectbox("Навигация", pages)
 
-    if choice == "Help":
-        show_help_page()
-        return
+def clear_logs():
+    """
+    Очищает лог-файл, если пользователь ввёл слово 'delete'.
+    """
+    clear_input = st.sidebar.text_input("Очистить логи (delete):")
+    if st.sidebar.button("Очистить логи"):
+        if clear_input.strip().lower() == "delete":
+            logger = logging.getLogger()
+            # Закрываем и удаляем обработчики, связанные с лог-файлом
+            for h in logger.handlers[:]:
+                if hasattr(h, 'baseFilename') and os.path.abspath(h.baseFilename) == os.path.abspath(LOG_FILE):
+                    h.close()
+                    logger.removeHandler(h)
+            if os.path.exists(LOG_FILE):
+                os.remove(LOG_FILE)
+                st.warning("Логи удалены!")
+            else:
+                st.info("Нет файла логов.")
+            # Создаем новый лог-файл
+            with open(LOG_FILE, 'w', encoding='utf-8'):
+                pass
+            fh = logging.FileHandler(LOG_FILE, encoding='utf-8')
+            formatter = logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(module)s.%(funcName)s - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S"
+            )
+            fh.setFormatter(formatter)
+            logger.addHandler(fh)
+            log_info("Создан новый log-файл (после очистки).")
+        else:
+            st.warning("Неверное слово, логи не очищены.")
 
-    st.title("Бизнес-приложение для прогнозирования табличных данных. Версия 1.0")
 
-    # Инициализация
-    for key_ in ["df","df_predict","predictor","leaderboard","predictions","fit_summary","feature_importance","ensemble_info"]:
-        if key_ not in st.session_state:
-            st.session_state[key_] = None
-
-    # (1) Загрузка
+def upload_data():
+    """
+    Обрабатывает загрузку train и predict файлов.
+    """
     st.sidebar.header("1. Загрузка данных")
-    train_file = st.sidebar.file_uploader("Train-файл", type=["csv","xls","xlsx"])
-    predict_file = st.sidebar.file_uploader("Прогноз-файл", type=["csv","xls","xlsx"])
+    train_file = st.sidebar.file_uploader("Train-файл", type=["csv", "xls", "xlsx"])
+    predict_file = st.sidebar.file_uploader("Прогноз-файл", type=["csv", "xls", "xlsx"])
 
     if st.sidebar.button("Загрузить"):
         if not train_file:
@@ -216,23 +275,24 @@ def main():
                 st.error(f"Ошибка загрузки: {e}")
                 log_error(f"Ошибка загрузки: {e}")
 
-    # (2) Настройка колонок
+
+def configure_columns():
+    """
+    Настраивает выбор целевой колонки и типа задачи.
+    """
     st.sidebar.header("2. Настройка колонок")
-    df_cur = st.session_state["df"]
+    df_cur = st.session_state.get("df")
     all_cols = list(df_cur.columns) if df_cur is not None else []
 
-    if "tgt_col_key" not in st.session_state:
+    if "tgt_col_key" not in st.session_state or st.session_state["tgt_col_key"] not in ["<нет>"] + all_cols:
         st.session_state["tgt_col_key"] = "<нет>"
-    else:
-        if st.session_state["tgt_col_key"] not in ["<нет>"] + all_cols:
-            st.session_state["tgt_col_key"] = "<нет>"
 
-    tgt_col = st.sidebar.selectbox("Целевая колонка", ["<нет>"]+all_cols, key="tgt_col_key")
+    tgt_col = st.sidebar.selectbox("Целевая колонка", ["<нет>"] + all_cols, key="tgt_col_key")
     log_info(f"Выбрана целевая колонка: {tgt_col}")
 
     if "problem_type_key" not in st.session_state:
         st.session_state["problem_type_key"] = "auto"
-    problem_options = ["auto","binary","multiclass","regression"]
+    problem_options = ["auto", "binary", "multiclass", "regression"]
     problem_type = st.sidebar.selectbox("Тип задачи", problem_options, key="problem_type_key")
     log_info(f"Выбран тип задачи: {problem_type}")
 
@@ -242,25 +302,28 @@ def main():
     eval_metric = st.sidebar.selectbox("Метрика", eval_metric_list, key="eval_metric_key")
     log_info(f"Выбрана метрика: {eval_metric}")
 
-    # (3) Пропуски
+    return tgt_col, problem_type, eval_metric
+
+
+def configure_missing_and_model():
+    """
+    Настраивает параметры заполнения пропусков и конфигурацию модели.
+    """
     st.sidebar.header("3. Обработка пропусков")
-    fill_opts = ["None","Constant=0","Mean","Median","Mode"]
+    fill_opts = ["None", "Constant=0", "Mean", "Median", "Mode"]
     if "fill_method_key" not in st.session_state:
         st.session_state["fill_method_key"] = "None"
     fill_method = st.sidebar.selectbox("Заполнение пропусков", fill_opts, key="fill_method_key")
     log_info(f"Метод заполнения: {fill_method}")
 
-    group_cols_for_fill = []
-
-    # (4) Настройки модели
     st.sidebar.header("4. Настройки модели")
     model_keys_list = list(AG_MODELS.keys())
     model_choices = ["* (all)"] + model_keys_list
     if "models_key" not in st.session_state:
         st.session_state["models_key"] = ["* (all)"]
     chosen_models = st.sidebar.multiselect("Модели AutoGluon", model_choices,
-                                           default=st.session_state["models_key"],
-                                           key="models_key")
+                                             default=st.session_state["models_key"],
+                                             key="models_key")
     log_info(f"Выбраны модели: {chosen_models}")
 
     if "presets_key" not in st.session_state:
@@ -275,13 +338,28 @@ def main():
     time_limit = st.sidebar.number_input("Time limit (sec)", 10, 36000, st.session_state["time_limit_key"], key="time_limit_key")
     log_info(f"Лимит времени: {time_limit} сек")
 
-    # (5) Обучение
-    st.sidebar.header("5. Обучение")
     if "auto_predict_save_checkbox" not in st.session_state:
         st.session_state["auto_predict_save_checkbox"] = False
     auto_predict_save = st.sidebar.checkbox("Авто-прогноз и сохранение", value=False, key="auto_predict_save_checkbox")
     log_info(f"Флаг автопрогноза: {auto_predict_save}")
 
+    return fill_method, chosen_models, presets, time_limit, auto_predict_save
+
+
+def initialize_session_state():
+    """
+    Инициализирует переменные st.session_state, если они не существуют.
+    """
+    for key in ["df", "df_predict", "predictor", "leaderboard", "predictions", "fit_summary", "feature_importance", "ensemble_info"]:
+        if key not in st.session_state:
+            st.session_state[key] = None
+
+
+def train_model_section(tgt_col, problem_type, eval_metric, fill_method, chosen_models, presets, time_limit, auto_predict_save):
+    """
+    Обучает модель AutoGluon и обновляет состояние с результатами.
+    """
+    st.sidebar.header("5. Обучение")
     if st.sidebar.button("Обучить модель"):
         df_tr = st.session_state.get("df")
         if df_tr is None:
@@ -295,22 +373,22 @@ def main():
                 log_info("Удаляем старые модели из AutogluonModels...")
                 shutil.rmtree("AutogluonModels", ignore_errors=True)
 
-                fill_val = fill_method
-                chosen_metric_val = eval_metric if eval_metric!="auto" else None
+                chosen_metric_val = eval_metric if eval_metric != "auto" else None
                 log_info(f"Начинаем обучение (metric={chosen_metric_val}, time_limit={time_limit}, presets={presets}, models={chosen_models})")
 
                 df_ready = df_tr.copy()
-                df_ready = fill_missing_values(df_ready, fill_val)
+                df_ready = fill_missing_values(df_ready, fill_method)
+
                 all_models_opt = "* (all)"
-                if (len(chosen_models)==1 and chosen_models[0]==all_models_opt) or (len(chosen_models)==0):
+                if (len(chosen_models) == 1 and chosen_models[0] == all_models_opt) or (len(chosen_models) == 0):
                     hyperparams = None
                 else:
-                    no_star = [m for m in chosen_models if m!=all_models_opt]
+                    no_star = [m for m in chosen_models if m != all_models_opt]
                     hyperparams = {m: {} for m in no_star}
 
                 predictor = TabularPredictor(
                     label=tgt_col,
-                    problem_type=problem_type if problem_type!="auto" else None,
+                    problem_type=problem_type if problem_type != "auto" else None,
                     eval_metric=chosen_metric_val,
                     path=MODEL_DIR
                 ).fit(
@@ -358,8 +436,8 @@ def main():
                     col_target=tgt_col,
                     problem_type=problem_type,
                     eval_metric=chosen_metric_val,
-                    fill_method=fill_val,
-                    group_cols=group_cols_for_fill,
+                    fill_method=fill_method,
+                    group_cols=[],  # Группировочные колонки не настраиваются в UI
                     presets=presets,
                     chosen_models=chosen_models
                 )
@@ -374,30 +452,14 @@ def main():
                     else:
                         try:
                             dff_ = df_fore.copy()
-                            dff_ = fill_missing_values(dff_, fill_val)
+                            dff_ = fill_missing_values(dff_, fill_method)
                             preds = predictor.predict(dff_)
                             if isinstance(preds, pd.Series):
                                 preds = preds.to_frame("prediction")
                             out_df = pd.concat([dff_.reset_index(drop=True), preds.reset_index(drop=True)], axis=1)
                             st.dataframe(out_df.head())
 
-                            excel_buf = io.BytesIO()
-                            with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
-                                out_df.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
-                                lb.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
-                                if not lb.empty:
-                                    sheet_lb = writer.sheets["ТаблицаЛидеров"]
-                                    bidx = lb.iloc[0].name
-                                    fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-                                    row_excel = bidx + 2
-                                    for col_idx in range(1, lb.shape[1]+1):
-                                        cell = sheet_lb.cell(row=row_excel, column=col_idx)
-                                        cell.fill = fill_green
-                                fi.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
-                                if st.session_state["ensemble_info"] is not None:
-                                    st.session_state["ensemble_info"].to_excel(writer, sheet_name="EnsembleInfo", index=False)
-
-                            excel_buf.seek(0)
+                            excel_buf = generate_excel_buffer(out_df, lb, fi, st.session_state.get("ensemble_info"))
                             st.download_button(
                                 label="Скачать Excel (авто)",
                                 data=excel_buf.getvalue(),
@@ -415,7 +477,11 @@ def main():
                 st.error(f"Ошибка обучения: {ex_}")
                 log_error(f"Ошибка обучения: {ex_}")
 
-    # (6) Прогноз вручную
+
+def manual_prediction_section(tgt_col):
+    """
+    Выполняет ручной прогноз.
+    """
     st.sidebar.header("6. Прогноз вручную")
     if st.sidebar.button("Сделать прогноз"):
         predictor = st.session_state.get("predictor")
@@ -444,7 +510,7 @@ def main():
                     st.dataframe(out_.head())
                     log_info(f"Ручной прогноз выполнен, первые строки:\n{out_.head(5)}")
 
-                    if st.session_state["ensemble_info"] is not None:
+                    if st.session_state.get("ensemble_info") is not None:
                         st.write("Состав WeightedEnsemble:")
                         st.dataframe(st.session_state["ensemble_info"])
 
@@ -452,7 +518,11 @@ def main():
                     st.error(f"Ошибка прогноза: {xp}")
                     log_error(f"Ошибка прогноза: {xp}")
 
-    # (7) Сохранение (CSV/Excel)
+
+def save_results_section():
+    """
+    Обеспечивает сохранение результатов в CSV и Excel.
+    """
     st.sidebar.header("7. Сохранение результатов")
     if st.sidebar.button("Сохранить в CSV"):
         final_preds = st.session_state.get("predictions")
@@ -478,34 +548,20 @@ def main():
             st.warning("Сделайте прогноз (predictions=None).")
             log_warning("Нельзя сохранить Excel: нет 'predictions'.")
         else:
-            xbuf = io.BytesIO()
-            with pd.ExcelWriter(xbuf, engine="openpyxl") as writer:
-                final_preds.to_excel(writer, sheet_name="РезультатыПрогноза", index=False)
-                if lb is not None:
-                    lb.to_excel(writer, sheet_name="ТаблицаЛидеров", index=False)
-                    if not lb.empty:
-                        sheet_lb = writer.sheets["ТаблицаЛидеров"]
-                        best_idx = lb.iloc[0].name
-                        fill_green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-                        row_excel = best_idx + 2
-                        for col_idx in range(1, lb.shape[1]+1):
-                            cell = sheet_lb.cell(row=row_excel, column=col_idx)
-                            cell.fill = fill_green
-                if fi is not None:
-                    fi.to_excel(writer, sheet_name="ВажностьПризнаков", index=True)
-                if en_df is not None:
-                    en_df.to_excel(writer, sheet_name="EnsembleInfo", index=False)
-
-            xbuf.seek(0)
+            excel_buf = generate_excel_buffer(final_preds, lb, fi, en_df)
             st.download_button(
                 label="Скачать Excel",
-                data=xbuf.getvalue(),
+                data=excel_buf.getvalue(),
                 file_name="results.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             log_info("Пользователь может скачать results.xlsx (ручной)")
 
-    # (8) Логи приложения
+
+def logs_section():
+    """
+    Отображает и позволяет скачивать логи приложения.
+    """
     st.sidebar.header("8. Логи приложения")
     if st.sidebar.button("Показать логи"):
         logs_ = read_logs()
@@ -521,31 +577,11 @@ def main():
             mime="text/plain"
         )
 
-    clear_input = st.sidebar.text_input("Очистить логи (delete):")
-    if st.sidebar.button("Очистить логи"):
-        if clear_input.strip().lower() == "delete":
-            # Закрываем все хендлеры
-            logger = logging.getLogger()
-            for h in logger.handlers[:]:
-                if hasattr(h, 'baseFilename') and os.path.abspath(h.baseFilename) == os.path.abspath(LOG_FILE):
-                    h.close()
-                    logger.removeHandler(h)
-            if os.path.exists(LOG_FILE):
-                os.remove(LOG_FILE)
-                st.warning("Логи удалены!")
-            else:
-                st.info("Нет файла логов.")
-            with open(LOG_FILE, 'w', encoding='utf-8'):
-                pass
-            fh = logging.FileHandler(LOG_FILE, encoding='utf-8')
-            formatter = ...
-            fh.setFormatter(formatter)
-            logger.addHandler(fh)
-            log_info("Создан новый log-файл (после очистки).")
-        else:
-            st.warning("Неверное слово, логи не очищены.")
 
-    # (9) Скачать модели + логи
+def download_archive_section():
+    """
+    Создает и предоставляет архив с моделями и логами.
+    """
     st.sidebar.header("9. Скачать модели + логи")
     if st.sidebar.button("Скачать архив (модели+логи)"):
         if not os.path.exists("AutogluonModels"):
@@ -574,6 +610,40 @@ def main():
             except Exception as e_:
                 st.error(f"Ошибка архивации: {e_}")
                 log_error(f"Ошибка архивации: {e_}")
+
+
+def main():
+    # Инициализация логгера
+    setup_logger(debug=False)
+    log_info("=== Запуск приложения (Tabular) в режиме INFO ===")
+
+    # Пытаемся загрузить существующую модель
+    if "predictor" not in st.session_state or st.session_state["predictor"] is None:
+        try_load_existing_model()
+
+    # Навигация по страницам
+    pages = ["Главная", "Help"]
+    choice = st.sidebar.selectbox("Навигация", pages)
+    if choice == "Help":
+        show_help_page()
+        return
+
+    st.title("Бизнес-приложение для прогнозирования табличных данных. Версия 1.0")
+
+    # Инициализация переменных состояния
+    initialize_session_state()
+
+    # Вызов функций для обработки каждой секции
+    upload_data()
+    tgt_col, problem_type, eval_metric = configure_columns()
+    fill_method, chosen_models, presets, time_limit, auto_predict_save = configure_missing_and_model()
+    train_model_section(tgt_col, problem_type, eval_metric, fill_method, chosen_models, presets, time_limit, auto_predict_save)
+    manual_prediction_section(tgt_col)
+    save_results_section()
+    logs_section()
+    clear_logs()
+    download_archive_section()
+
 
 if __name__ == "__main__":
     main()

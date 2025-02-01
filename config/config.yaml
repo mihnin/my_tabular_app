@@ -15,17 +15,15 @@ metrics_dict:
   spearmanr: Spearman R
 
 ag_models:
-  CAT: CatBoost        # CAT -> CatBoost
-  GBM: LightGBM        # GBM -> LightGBM
-  RF: RandomForestGini # RF -> RandomForestGini
-  XT: ExtraTreesGini   # XT -> ExtraTreesGini
-  XGB: XGBoost         # XGB -> XGBoost
-  FASTAI: NeuralNetFastAI    # FASTAI -> fastai NN
-  NN_TORCH: PyTorchNN        # (например, если хотите Torch)
-  LR: "Linear scikit"        # линейная модель
-  KNN: "KNearestNeighbors"    # ...
-
-  # Add more models if needed    # ...
+  CAT: CatBoost
+  GBM: LightGBM
+  RF: RandomForestGini
+  XT: ExtraTreesGini
+  XGB: XGBoost
+  FASTAI: NeuralNetFastAI
+  NN_TORCH: PyTorchNN
+  LR: "Linear scikit"
+  KNN: "KNearestNeighbors"
 
 presets_list:
   - fast_training
