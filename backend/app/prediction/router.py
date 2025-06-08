@@ -1,0 +1,187 @@
+import json
+from fastapi import APIRouter, HTTPException, Response
+import os
+import pandas as pd
+from io import BytesIO
+import logging
+from AutoML.manager import automl_manager
+import asyncio
+from src.features.feature_engineering import fill_missing_values
+from sessions.utils import (
+    get_session_path,
+    load_session_metadata,
+)
+
+router = APIRouter()
+
+def predict_tabular(session_id: str):
+    logging.info(f"[predict_tabular] Начало прогноза для session_id={session_id}")
+    session_path = get_session_path(session_id)
+    if not os.path.exists(session_path):
+        logging.error(f"Папка сессии не найдена: {session_path}")
+        raise HTTPException(status_code=404, detail="Сессия не найдена")
+
+    metadata = load_session_metadata(session_id)
+    if not metadata:
+        logging.error(f"Файл metadata.json не найден для session_id={session_id}")
+        raise HTTPException(status_code=404, detail="metadata.json не найден")
+    params = metadata.get("training_parameters")
+    if not params:
+        logging.error(f"Параметры обучения не найдены в metadata.json для session_id={session_id}")
+        raise HTTPException(status_code=400, detail="Параметры обучения не найдены в metadata.json")
+
+    # Поиск test файла (csv/xlsx/xls) для прогноза
+    test_file = None
+    for fname in os.listdir(session_path):
+        if fname.startswith('test_') and (fname.endswith('.csv') or fname.endswith('.xlsx') or fname.endswith('.xls')):
+            test_file = os.path.join(session_path, fname)
+            break
+    if not test_file:
+        logging.error(f"Файл test не найден для session_id={session_id}")
+        raise HTTPException(status_code=404, detail="Файл test не найден для прогноза")
+    file_to_predict = test_file
+    logging.info(f"Файл test найден и будет использован для прогноза: {test_file}")
+    try:
+        if file_to_predict.endswith('.csv'):
+            df = pd.read_csv(file_to_predict)
+        else:
+            df = pd.read_excel(file_to_predict)
+        logging.info(f"Файл для прогноза успешно загружен: {file_to_predict}")
+    except Exception as e:
+        logging.error(f"Ошибка чтения файла для прогноза: {e}")
+        raise HTTPException(status_code=400, detail=f"Ошибка чтения файла для прогноза: {e}")
+
+    # Препроцессинг (если нужно, например, fill_missing_values)
+    fill_method = params.get("fill_missing_method", None)
+    if fill_method:
+        df = fill_missing_values(df, fill_method)
+        logging.info(f"Пропущенные значения обработаны методом: {fill_method}")
+
+    # Предсказание
+    if len(df) != 0:
+        best_strategy = automl_manager.get_best_strategy(session_id)
+        preds = best_strategy.predict(df, session_id, params)
+    else:
+        preds = pd.DataFrame()
+    return preds
+
+def save_prediction(output, session_id):
+    session_path = get_session_path(session_id)
+    prediction_file_path = os.path.join(session_path, f"prediction_{session_id}.xlsx")
+    with open(prediction_file_path, "wb") as f:
+        f.write(output.getvalue())
+    logging.info(f"[predict_tabular] Прогноз сохранён в файл: {prediction_file_path}")
+
+@router.get("/predict/{session_id}")
+async def predict_tabular_endpoint(session_id: str):
+    """Сделать прогноз по id сессии и вернуть xlsx файл с результатом."""
+    preds = await asyncio.to_thread(predict_tabular, session_id)
+    output = BytesIO()
+    preds.to_excel(output, index=False)
+    output.seek(0)
+    save_prediction(output, session_id)
+    logging.info(f"[predict_tabular] Отправка файла пользователю (session_id={session_id})")
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=prediction_{session_id}.xlsx"
+        }
+    )
+
+@router.get("/download_prediction/{session_id}")
+def download_prediction_file(session_id: str):
+    """Скачать ранее сохранённый файл прогноза по id сессии с добавлением leaderboard и параметров обучения."""
+    logging.info(f"[download_prediction_file] Запрос на скачивание xlsx для session_id={session_id}")
+    session_path = get_session_path(session_id)
+    prediction_file_path = os.path.join(session_path, f"prediction_{session_id}.xlsx")
+    leaderboard_path = os.path.join(session_path, "leaderboard.csv")
+    metadata_path = os.path.join(session_path, "metadata.json")
+
+    # Проверяем наличие файла прогноза
+    if not os.path.exists(prediction_file_path):
+        logging.error(f"Файл прогноза не найден: {prediction_file_path}")
+        raise HTTPException(status_code=404, detail="Файл прогноза не найден")
+
+    # Читаем прогноз
+    try:
+        df_pred = pd.read_excel(prediction_file_path)
+    except Exception as e:
+        logging.error(f"Ошибка чтения файла прогноза: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка чтения файла прогноза: {e}")
+
+    # Читаем leaderboard
+    df_leaderboard = None
+    if os.path.exists(leaderboard_path):
+        try:
+            df_leaderboard = pd.read_csv(leaderboard_path)
+        except Exception as e:
+            logging.warning(f"Не удалось прочитать leaderboard: {e}")
+            df_leaderboard = None
+
+    # Читаем параметры обучения
+    params_dict = None
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            params_dict = metadata.get("training_parameters", {})
+        except Exception as e:
+            logging.warning(f"Не удалось прочитать параметры обучения: {e}")
+            params_dict = None
+
+    # Формируем новый Excel-файл с несколькими листами
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        # Первый лист — прогноз
+        df_pred.to_excel(writer, sheet_name="Prediction", index=False)
+        # Второй лист — leaderboard
+        if df_leaderboard is not None:
+            df_leaderboard.to_excel(writer, sheet_name="Leaderboard", index=False)
+        else:
+            pd.DataFrame({"info": ["Leaderboard not found"]}).to_excel(writer, sheet_name="Leaderboard", index=False)
+        # Третий лист — параметры обучения
+        if params_dict is not None:
+            pd.DataFrame(list(params_dict.items()), columns=["Parameter", "Value"]).to_excel(writer, sheet_name="TrainingParams", index=False)
+        else:
+            pd.DataFrame({"info": ["Training parameters not found"]}).to_excel(writer, sheet_name="TrainingParams", index=False)
+    output.seek(0)
+
+    logging.info(f"[download_prediction_file] Мульти-листовой Excel-файл отправлен: prediction_{session_id}.xlsx")
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=prediction_{session_id}.xlsx"
+        }
+    )
+
+@router.get("/download_prediction_csv/{session_id}")
+def download_prediction_csv_file(session_id: str):
+    """Скачать ранее сохранённый файл прогноза в формате CSV по id сессии."""
+    logging.info(f"[download_prediction_csv_file] Запрос на скачивание csv для session_id={session_id}")
+    session_path = get_session_path(session_id)
+    prediction_xlsx_path = os.path.join(session_path, f"prediction_{session_id}.xlsx")
+    prediction_csv_path = os.path.join(session_path, f"prediction_{session_id}.csv")
+    if not os.path.exists(prediction_xlsx_path):
+        logging.error(f"Файл прогноза (xlsx) не найден: {prediction_xlsx_path}")
+        raise HTTPException(status_code=404, detail="Файл прогноза не найден")
+    # Если CSV уже есть, используем его, иначе конвертируем из xlsx
+    if not os.path.exists(prediction_csv_path):
+        try:
+            df = pd.read_excel(prediction_xlsx_path)
+            df.to_csv(prediction_csv_path, index=False, encoding="utf-8-sig")
+            logging.info(f"[download_prediction_csv_file] Конвертация xlsx в csv: {prediction_csv_path}")
+        except Exception as e:
+            logging.error(f"Ошибка при конвертации в CSV: {e}")
+            raise HTTPException(status_code=500, detail=f"Ошибка при конвертации в CSV: {e}")
+    with open(prediction_csv_path, "rb") as f:
+        file_bytes = f.read()
+    logging.info(f"[download_prediction_csv_file] CSV-файл отправлен: {prediction_csv_path}")
+    return Response(
+        content=file_bytes,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=prediction_{session_id}.csv"
+        }
+    )

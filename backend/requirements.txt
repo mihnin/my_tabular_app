@@ -1,0 +1,15 @@
+streamlit
+pandas
+plotly
+autogluon.tabular[all]
+openpyxl
+pyyaml
+pip-tools
+fastapi
+uvicorn
+sqlalchemy
+asyncpg
+python-jose
+dotenv
+python-multipart
+XlsxWriter
