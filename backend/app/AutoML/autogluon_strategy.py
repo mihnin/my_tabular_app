@@ -43,6 +43,7 @@ class AutoGluonStrategy(AutoMLStrategy):
         else:
             hyperparams = {m: {} for m in models_to_train}
 
+        autogluon_train_semaphore.acquire()
         try:
             logging.info(f"[AutoGluonStrategy] Старт обучения TabularPredictor для session_id={session_id}")
             predictor = TabularPredictor(
@@ -55,7 +56,8 @@ class AutoGluonStrategy(AutoMLStrategy):
                 train_data=df_train,
                 time_limit=time_limit,
                 presets=presets,
-                hyperparameters=hyperparams
+                hyperparameters=hyperparams,
+                dynamic_stacking=False
             )
             # Сохраняем leaderboard
             leaderboard = predictor.leaderboard(display=False)
@@ -107,6 +109,8 @@ class AutoGluonStrategy(AutoMLStrategy):
                 meta['error'] = str(e)
                 save_session_metadata(session_id, meta)
             raise
+        finally:
+            autogluon_train_semaphore.release()
 
     def predict(self, df: Any, session_id: str, training_params: Any):
         """

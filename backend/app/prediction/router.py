@@ -74,13 +74,16 @@ def save_prediction(output, session_id):
 
 @router.get("/predict/{session_id}")
 async def predict_tabular_endpoint(session_id: str):
-    """Сделать прогноз по id сессии и вернуть xlsx файл с результатом."""
+    """Сделать прогноз по id сессии и вернуть xlsx файл с результатом. Сохраняет только Parquet!"""
     preds = await asyncio.to_thread(predict_tabular, session_id)
+    session_path = get_session_path(session_id)
+    prediction_parquet_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
+    preds.to_parquet(prediction_parquet_path, index=False)
+    # Формируем Excel на лету
     output = BytesIO()
     preds.to_excel(output, index=False)
     output.seek(0)
-    save_prediction(output, session_id)
-    logging.info(f"[predict_tabular] Отправка файла пользователю (session_id={session_id})")
+    logging.info(f"[predict_tabular] Прогноз сохранён в Parquet и отправлен как Excel (session_id={session_id})")
     return Response(
         content=output.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -94,18 +97,19 @@ def download_prediction_file(session_id: str):
     """Скачать ранее сохранённый файл прогноза по id сессии с добавлением leaderboard и параметров обучения."""
     logging.info(f"[download_prediction_file] Запрос на скачивание xlsx для session_id={session_id}")
     session_path = get_session_path(session_id)
-    prediction_file_path = os.path.join(session_path, f"prediction_{session_id}.xlsx")
+    prediction_parquet_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
     leaderboard_path = os.path.join(session_path, "leaderboard.csv")
     metadata_path = os.path.join(session_path, "metadata.json")
+    feature_importance_path = os.path.join(session_path, "feature_importance.csv")
 
     # Проверяем наличие файла прогноза
-    if not os.path.exists(prediction_file_path):
-        logging.error(f"Файл прогноза не найден: {prediction_file_path}")
+    if not os.path.exists(prediction_parquet_path):
+        logging.error(f"Файл прогноза не найден: {prediction_parquet_path}")
         raise HTTPException(status_code=404, detail="Файл прогноза не найден")
 
     # Читаем прогноз
     try:
-        df_pred = pd.read_excel(prediction_file_path)
+        df_pred = pd.read_parquet(prediction_parquet_path)
     except Exception as e:
         logging.error(f"Ошибка чтения файла прогноза: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка чтения файла прогноза: {e}")
@@ -145,6 +149,23 @@ def download_prediction_file(session_id: str):
             pd.DataFrame(list(params_dict.items()), columns=["Parameter", "Value"]).to_excel(writer, sheet_name="TrainingParams", index=False)
         else:
             pd.DataFrame({"info": ["Training parameters not found"]}).to_excel(writer, sheet_name="TrainingParams", index=False)
+        # Четвёртый лист — feature_importance (берём как в get_training_status)
+        fi_path = os.path.join(session_path, "autogluon", "feature_importance.csv")
+        feature_importance = None
+        if os.path.exists(fi_path):
+            try:
+                feature_importance = pd.read_csv(fi_path).to_dict(orient="records")
+                logging.info(f"[download_prediction_file] Feature importance добавлен для session_id={session_id}")
+            except Exception as e:
+                logging.warning(f"[download_prediction_file] Не удалось прочитать feature importance: {e}")
+        if feature_importance and isinstance(feature_importance, list) and len(feature_importance) > 0:
+            try:
+                df_fi = pd.DataFrame(feature_importance)
+                df_fi.to_excel(writer, sheet_name="FeatureImportance", index=False)
+            except Exception as e:
+                pd.DataFrame({"info": [f"Feature importance error: {e}"]}).to_excel(writer, sheet_name="FeatureImportance", index=False)
+        else:
+            pd.DataFrame({"info": ["Feature importance not found"]}).to_excel(writer, sheet_name="FeatureImportance", index=False)
     output.seek(0)
 
     logging.info(f"[download_prediction_file] Мульти-листовой Excel-файл отправлен: prediction_{session_id}.xlsx")
@@ -161,27 +182,37 @@ def download_prediction_csv_file(session_id: str):
     """Скачать ранее сохранённый файл прогноза в формате CSV по id сессии."""
     logging.info(f"[download_prediction_csv_file] Запрос на скачивание csv для session_id={session_id}")
     session_path = get_session_path(session_id)
-    prediction_xlsx_path = os.path.join(session_path, f"prediction_{session_id}.xlsx")
-    prediction_csv_path = os.path.join(session_path, f"prediction_{session_id}.csv")
-    if not os.path.exists(prediction_xlsx_path):
-        logging.error(f"Файл прогноза (xlsx) не найден: {prediction_xlsx_path}")
+    prediction_parquet_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
+    if not os.path.exists(prediction_parquet_path):
+        logging.error(f"Файл прогноза (parquet) не найден: {prediction_parquet_path}")
         raise HTTPException(status_code=404, detail="Файл прогноза не найден")
-    # Если CSV уже есть, используем его, иначе конвертируем из xlsx
-    if not os.path.exists(prediction_csv_path):
-        try:
-            df = pd.read_excel(prediction_xlsx_path)
-            df.to_csv(prediction_csv_path, index=False, encoding="utf-8-sig")
-            logging.info(f"[download_prediction_csv_file] Конвертация xlsx в csv: {prediction_csv_path}")
-        except Exception as e:
-            logging.error(f"Ошибка при конвертации в CSV: {e}")
-            raise HTTPException(status_code=500, detail=f"Ошибка при конвертации в CSV: {e}")
-    with open(prediction_csv_path, "rb") as f:
-        file_bytes = f.read()
-    logging.info(f"[download_prediction_csv_file] CSV-файл отправлен: {prediction_csv_path}")
+    try:
+        df = pd.read_parquet(prediction_parquet_path)
+        output = BytesIO()
+        df.to_csv(output, index=False, encoding="utf-8-sig")
+        output.seek(0)
+    except Exception as e:
+        logging.error(f"Ошибка при формировании CSV: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при формировании CSV: {e}")
+    logging.info(f"[download_prediction_csv_file] CSV-файл отправлен: prediction_{session_id}.csv")
     return Response(
-        content=file_bytes,
+        content=output.getvalue(),
         media_type="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename=prediction_{session_id}.csv"
         }
     )
+
+@router.get("/predict_head/{session_id}")
+def predict_head_endpoint(session_id: str):
+    """Возвращает первые 10 строк прогноза для превью (JSON)."""
+    session_path = get_session_path(session_id)
+    prediction_parquet_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
+    if not os.path.exists(prediction_parquet_path):
+        raise HTTPException(status_code=404, detail="Файл прогноза не найден")
+    try:
+        df = pd.read_parquet(prediction_parquet_path)
+        head = df.head(10).to_dict(orient="records")
+        return {"prediction_head": head}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка чтения файла прогноза: {e}")

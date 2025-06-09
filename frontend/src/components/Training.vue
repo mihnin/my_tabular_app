@@ -355,6 +355,15 @@ export default defineComponent({
           formData.append('db_table', selectedTable.value);
           formData.append('db_schema', selectedDbSchema.value);
         }
+        // --- ЯВНО ДОБАВЛЯЕМ db_schema для новой таблицы ---
+        if (
+          trainPredictSave.value &&
+          dbSaveMode.value === 'new' &&
+          newTableName.value &&
+          selectedDbSchema.value
+        ) {
+          formData.append('db_schema', selectedDbSchema.value);
+        }
         // Выбор эндпоинта в зависимости от чекбокса
         const endpoint = trainPredictSave.value
           ? 'http://localhost:8000/train_prediction_save/'
@@ -402,6 +411,7 @@ export default defineComponent({
         formData.append('primary_keys', JSON.stringify(selectedPrimaryKeys.value));
         // Специальный режим: только создание таблицы по первой строке
         formData.append('create_table_only', 'true');
+        formData.append('db_schema', selectedDbSchema.value); // <-- исправлено
         const resp = await fetch('http://localhost:8000/create-table-from-file', {
           method: 'POST',
           headers: {
@@ -454,7 +464,7 @@ export default defineComponent({
         formData.append('table_name', tableName);
         formData.append('primary_keys', JSON.stringify(selectedPrimaryKeys.value));
         formData.append('create_table_only', 'true');
-        formData.append('schema', schema);
+        formData.append('db_schema', schema); // <-- исправлено
         const resp = await fetch('http://localhost:8000/create-table-from-file', {
           method: 'POST',
           headers: {
@@ -479,7 +489,7 @@ export default defineComponent({
         const formData = new FormData();
         formData.append('file', store.selectedFile as Blob, store.selectedFile?.name ?? 'uploaded_file');
         formData.append('table_name', tableName);
-        formData.append('schema', schema);
+        formData.append('db_schema', schema); // <-- исправлено
         const resp = await fetch('http://localhost:8000/check-df-matches-table-schema', {
           method: 'POST',
           headers: {

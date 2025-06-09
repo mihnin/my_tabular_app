@@ -4,14 +4,14 @@
 
     <!-- Тренировочные данные (accordion) -->
     <div class="accordion-section">
-      <button class="accordion-toggle" @click="trainOpen = !trainOpen">
+      <button class="accordion-toggle train-toggle" @click="onTrainAccordionClick">
         <span>{{ trainOpen ? '▼' : '►' }}</span>
-        Загрузка тренировочных данных
+        Загрузка данных для обучения
       </button>
       <transition name="accordion-fade">
         <div v-show="trainOpen" class="accordion-content">
           <div class="upload-section">
-            <h4 class="subsection-title">Загрузка тренировочных данных</h4>
+            <h4 class="subsection-title">Загрузка данных для обучения</h4>
             <div class="upload-zone" @dragover.prevent @drop.prevent="handleDrop">
               <input 
                 type="file" 
@@ -63,7 +63,7 @@
               @click="downloadFromApp"
               style="width: 100%; margin-top: 0.5rem; margin-bottom: 10px;"
             >
-              ⬇️ Скачать данные из приложения
+              Скачать тренировочные данные из приложения
             </button>
           </div>
         </div>
@@ -72,14 +72,14 @@
 
     <!-- Тестовые данные (accordion) -->
     <div class="accordion-section">
-      <button class="accordion-toggle" @click="testOpen = !testOpen">
+      <button class="accordion-toggle test-toggle" @click="onTestAccordionClick">
         <span>{{ testOpen ? '▼' : '►' }}</span>
-        Загрузка тестовых данных
+        Загрузка данных для прогноза
       </button>
       <transition name="accordion-fade">
         <div v-show="testOpen" class="accordion-content">
           <div class="upload-section">
-            <h4 class="subsection-title">Загрузка тестовых данных</h4>
+            <h4 class="subsection-title">Загрузка данных для прогноза</h4>
             <div class="upload-zone" @dragover.prevent @drop.prevent="handleTestDrop">
               <input 
                 type="file" 
@@ -131,7 +131,7 @@
               @click="downloadTestFromApp"
               style="width: 100%; margin-top: 0.5rem; margin-bottom: 10px;"
             >
-              ⬇️ Скачать данные из приложения
+              Скачать тестовые данные из приложения
             </button>
           </div>
         </div>
@@ -652,7 +652,7 @@ export default defineComponent({
           emit('file-loaded', converted)
         }
       } catch (error) {
-        console.error('Error processing file:', error)
+        // Ошибка обработки файла
       }
     }
 
@@ -725,12 +725,6 @@ export default defineComponent({
             },
           });
           const result = await response.json();
-          // --- DEBUG LOG ---
-          console.log('result.tables', result.tables)
-          console.log('dbSchemas', Object.keys(result.tables))
-          console.log('count_available', result.count_available)
-          console.log('count_total', result.count_total)
-          // --- END DEBUG LOG ---
           if (result.success) {
             dbSchemas.value = Object.keys(result.tables)
             dbTablesBySchema.value = result.tables
@@ -792,8 +786,8 @@ export default defineComponent({
         store.setFileLoaded(true) // <--- добавлено для синхронизации состояния
         emit('file-loaded', store.tableData)
         closeDbModal()
-      } catch (error: any) {
-        dbError.value = 'Ошибка загрузки данных из БД: ' + (error?.message || error)
+      } catch (error) {
+        dbError.value = 'Ошибка загрузки данных из БД: ' + (error && typeof error === 'object' && 'message' in error ? error.message : String(error))
       } finally {
         isLoadingFromDb.value = false
       }
@@ -995,7 +989,7 @@ export default defineComponent({
           store.setTestTableData(converted)
         }
       } catch (error) {
-        console.error('Error processing test file:', error)
+        // Ошибка обработки тестового файла
       }
     }
     const handleTestUpload = async () => {
@@ -1275,6 +1269,15 @@ export default defineComponent({
       return result
     })
 
+    function onTrainAccordionClick(event: MouseEvent) {
+      trainOpen.value = !trainOpen.value;
+      (event.currentTarget as HTMLButtonElement | null)?.blur();
+    }
+    function onTestAccordionClick(event: MouseEvent) {
+      testOpen.value = !testOpen.value;
+      (event.currentTarget as HTMLButtonElement | null)?.blur();
+    }
+
     return {
       fileInput,
       selectedFile,
@@ -1362,11 +1365,15 @@ export default defineComponent({
       testSelectedUploadDbSchema,
       testUploadDbTablesBySchema,
       filteredTestUploadDbTables,
+      // --- DOWNLOAD BUTTONS ---
+      downloadFromApp,
       downloadTestFromApp,
       // Accordion
       trainOpen,
       testOpen,
       store,
+      onTrainAccordionClick,
+      onTestAccordionClick,
     }
   }
 })
@@ -1443,7 +1450,7 @@ export default defineComponent({
 }
 
 .upload-zone:hover {
-  border-color: #2196F3;
+  border-color: #2196f3;
   background-color: #f0f7ff;
 }
 
@@ -1828,24 +1835,40 @@ button:hover {
 .accordion-toggle {
   width: 100%;
   text-align: left;
-  background: #eaf2fb;
   border: none;
   outline: none;
-  font-size: 1.08rem;
-  font-weight: 500;
-  color: #222;
-  padding: 0.7rem 1rem;
-  border-radius: 4px;
+  font-size: 1.13rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 0.95rem 1.2rem;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.7em;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.07);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.01em;
+  font-family: 'Montserrat', 'Segoe UI Semibold', 'Arial', sans-serif;
+  background: #2196f3;
 }
-.accordion-toggle:hover {
-  background: #d2e5fa;
-  color: #1565c0;
+.train-toggle,
+
+.test-toggle {
+  background: #2196f3;
 }
+.train-toggle:hover, .train-toggle:focus,
+.test-toggle:hover, .test-toggle:focus {
+  background: #1976d2;
+}
+.accordion-toggle:focus-visible,
+.train-toggle:focus-visible,
+.test-toggle:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
 .accordion-content {
   overflow: hidden;
   padding: 0;

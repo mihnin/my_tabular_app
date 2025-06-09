@@ -238,11 +238,11 @@ async def save_prediction_to_db(
     if not db_schema or not session_id or not table_name:
         raise HTTPException(status_code=400, detail="db_schema (или schema), session_id и table_name обязательны")
     session_path = get_session_path(session_id)
-    pred_path = os.path.join(session_path, f"prediction_{session_id}.xlsx")
+    pred_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
     if not os.path.exists(pred_path):
         raise HTTPException(status_code=404, detail=f"Файл прогноза не найден: {pred_path}")
     try:
-        df = pd.read_excel(pred_path)
+        df = pd.read_parquet(pred_path)
         df = auto_convert_dates(df)
         drop_cols = [str(round(x/10, 1)) for x in range(1, 10)]
         df = df.drop(columns=[col for col in drop_cols if col in df.columns], errors='ignore')

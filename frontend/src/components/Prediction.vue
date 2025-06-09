@@ -44,83 +44,25 @@ export default defineComponent({
         alert('Сначала обучите модель. Session ID не найден.');
         return;
       }
-
       isLoading.value = true;
-      // It's good practice to clear old predictions immediately if that's the desired UX
-      // store.setPredictionRows([]); // Optional: clear immediately if you want UI to reflect loading new set
-
       try {
-        console.log('Fetching prediction for session:', sessionId);
-        const response = await fetch(`http://localhost:8000/predict/${sessionId}`);
+        // Fetch only the preview (first 10 rows) as JSON
+        const response = await fetch(`http://localhost:8000/predict_head/${sessionId}`);
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Error response from server:', errorText);
-          throw new Error('Ошибка при получении прогноза: ' + errorText); // Throw to be caught by catch block
+          throw new Error('Ошибка при получении превью прогноза: ' + errorText);
         }
-
-        console.log('Response received, getting blob...');
-        const blob = await response.blob();
-        console.log('Converting blob to array buffer...');
-        const arrayBuffer = await blob.arrayBuffer();
-        console.log('Loading XLSX library...');
-        const XLSX = await import('xlsx');
-        console.log('Parsing Excel file...');
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        console.log('Excel parsed successfully');
-
-        if (!json || json.length < 2) { // Expects headers + at least one data row
-          throw new Error('Получены некорректные данные прогноза (น้อยกว่า 2 rows in Excel)');
+        const data = await response.json();
+        if (data && Array.isArray(data.prediction_head)) {
+          store.setPredictionRows(data.prediction_head);
+        } else {
+          store.setPredictionRows([]);
         }
-
-        const headers = json[0] as string[];
-        const dataRows = json.slice(1, Math.min(json.length, 11)); // Take headers + up to 10 data rows
-
-        // Найти индекс и имя колонки с датой (обычно timestamp/date)
-        const dateHeader = headers.find(h => h.toLowerCase().includes('timestamp') || h.toLowerCase().includes('date'));
-        const dateIdx = dateHeader ? headers.indexOf(dateHeader) : -1;
-
-        const processedRows = dataRows.map(rowArray => {
-          const obj: Record<string, any> = {};
-          headers.forEach((header, i) => {
-            let value = rowArray[i];
-            // Если это колонка даты и значение — число, преобразуем в строку даты и времени
-            if (i === dateIdx && typeof value === 'number' && XLSX && XLSX.utils && XLSX.utils.encode_col) {
-              // Используем XLSX.SSF.parse_date_code, если доступно
-              const parseDateCode = XLSX.SSF?.parse_date_code || (window as any).XLSX?.SSF?.parse_date_code;
-              if (parseDateCode) {
-                const dateObj = parseDateCode(value);
-                if (dateObj) {
-                  const pad = (n: number) => n.toString().padStart(2, '0');
-                  value = `${dateObj.y}-${pad(dateObj.m)}-${pad(dateObj.d)} ${pad(dateObj.H)}:${pad(dateObj.M)}:${pad(dateObj.S)}`;
-                }
-              }
-            }
-            obj[header] = value;
-          });
-          return obj;
-        });
-        
-        console.log('Prediction raw json (array of arrays):', json);
-        console.log('Prediction parsed rows (array of objects):', processedRows);
-
-        // Directly set the new prediction rows
-        store.setPredictionRows(processedRows);
-        console.log('Prediction rows set in store:', store.predictionRows);
-
       } catch (error) {
-        console.error('Error in prediction process:', error);
-        alert(`Ошибка при получении прогноза: ${error instanceof Error ? error.message : String(error)}`);
-        store.setPredictionRows([]); // Clear prediction rows on error
+        alert(`Ошибка при получении превью прогноза: ${error instanceof Error ? error.message : String(error)}`);
+        store.setPredictionRows([]);
       } finally {
-        // The user wanted a slight delay to see processing.
-        // This delay is for the button's loading spinner.
-        setTimeout(() => {
-          isLoading.value = false;
-          console.log('FINALLY: local isLoading set to false. Current predictionRows in store:', store.predictionRows);
-        }, 300);
+        setTimeout(() => { isLoading.value = false; }, 300);
       }
     };
 
