@@ -173,3 +173,5 @@ cython_debug/
 training_sessions
 requirements_lite.txt
 my_env
+
+backend/app/logs

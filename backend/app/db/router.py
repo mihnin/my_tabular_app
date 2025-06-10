@@ -147,8 +147,6 @@ async def upload_excel_to_db_endpoint(
         content = await file.read()
         try:
             df = pd.read_excel(io.BytesIO(content))
-            df = auto_convert_dates(df)
-            print(df.dtypes)
         except Exception as e:
             raise HTTPException(status_code=400, detail=f'Ошибка чтения Excel: {str(e)}')
         if df.empty:
@@ -242,10 +240,9 @@ async def save_prediction_to_db(
     if not os.path.exists(pred_path):
         raise HTTPException(status_code=404, detail=f"Файл прогноза не найден: {pred_path}")
     try:
+
         df = pd.read_parquet(pred_path)
-        df = auto_convert_dates(df)
-        drop_cols = [str(round(x/10, 1)) for x in range(1, 10)]
-        df = df.drop(columns=[col for col in drop_cols if col in df.columns], errors='ignore')
+
         if df.empty:
             raise HTTPException(status_code=400, detail="Файл прогноза пустой")
         if create_new:
@@ -279,13 +276,12 @@ async def create_table_from_file_endpoint(
     Используется только первая строка данных (после заголовков).
     """
     try:
-        print(file.filename)
         if not (file.filename and (file.filename.endswith('.xlsx') or file.filename.endswith('.xls'))):
             raise HTTPException(status_code=400, detail='Файл должен быть Excel (.xlsx или .xls)')
         content = await file.read()
         try:
             df = pd.read_excel(io.BytesIO(content))
-            df = auto_convert_dates(df)
+
         except Exception as e:
             raise HTTPException(status_code=400, detail=f'Ошибка чтения Excel: {str(e)}')
         if df.empty:
@@ -332,7 +328,6 @@ async def check_df_matches_table_schema_endpoint(
         content = await file.read()
         try:
             df = pd.read_excel(io.BytesIO(content))
-            df = auto_convert_dates(df)
             # Приводим столбец Date к типу datetime
             if 'Date' in df.columns:
                 df['Date'] = pd.to_datetime(df['Date'], errors='raise')
@@ -340,7 +335,7 @@ async def check_df_matches_table_schema_endpoint(
             raise HTTPException(status_code=400, detail=f'Ошибка чтения Excel: {str(e)}')
         if df.empty:
             raise HTTPException(status_code=400, detail='Файл пустой или не содержит данных')
-        df = auto_convert_dates(df)
+        
         matches = await check_df_matches_table_schema(df, db_schema, table_name, db_creds['username'], db_creds['password'])
         if matches:
             return {"success": True, "detail": "Структура совпадает"}

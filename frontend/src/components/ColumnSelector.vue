@@ -16,7 +16,7 @@
       <label>Тип задачи</label>
       <select v-model="selectedTaskType">
         <option value="auto">auto (автоопределение)</option>
-        <option value="binary">binary (двоичная классификация)</option>
+        <option value="binary">binary (бинарная классификация)</option>
         <option value="multiclass">multiclass (мультиклассовая классификация)</option>
         <option value="regression">regression (регрессия)</option>
       </select>

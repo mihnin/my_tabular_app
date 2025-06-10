@@ -1,12 +1,12 @@
 <template>
   <div class="page-content">
-    <!-- Показываем Train/Test/график только если нет leaderboard -->
+    <!-- Показываем данные для обучения/прогноза/график только если нет leaderboard -->
     <template v-if="!store.trainingStatus || !store.trainingStatus.leaderboard || !Array.isArray(store.trainingStatus.leaderboard) || store.trainingStatus.leaderboard.length === 0">
       <UniversalDataTable
         v-if="store.tableData.length"
         :data="store.tableData"
-        title="Train"
-        statsTitle="Статистика Train"
+        title="Данные для обучения"
+        statsTitle="Статистика данных для обучения"
       />
       <hr v-if="store.tableData.length && store.testFileLoaded && store.testTableData && store.testTableData.length" class="data-separator" />
       <div
@@ -16,8 +16,8 @@
       >
         <UniversalDataTable
           :data="store.testTableData"
-          title="Test"
-          statsTitle="Статистика Test"
+          title="Данные для прогноза"
+          statsTitle="Статистика данных для прогноза"
           :bannerStyle="{ backgroundColor: '#1976d2' }"
         />
       </div>

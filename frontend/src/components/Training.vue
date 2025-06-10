@@ -30,7 +30,7 @@
       <div class="progress-container">
         <div 
           class="progress-bar" 
-          :style="{ width: `${trainingStatus.progress}%` }"
+          :style="{ width: `${getProgressPercentage}%` }"
           :class="{ 'progress-error': trainingStatus.status === 'failed' }"
         ></div>
       </div>
@@ -189,11 +189,26 @@ export default defineComponent({
         return 'Повышеная нагрузка на сервер. Обучение и прогноз займет немного больше времени.'
       }
       const status = store.trainingStatus.status
+      const progress = store.trainingStatus.progress ?? 0
+      
       if (status === 'initializing') return 'Инициализация обучения...'
-      if (status === 'running') return `Обучение в процессе (${store.trainingStatus.progress ?? 0}%)`
-      if (status === 'completed') return 'Обучение успешно завершено!'
+      if (status === 'running') return `Обучение в процессе (${progress}%)`
+      if (status === 'completed' || status === 'complete') return 'Обучение успешно завершено!'
       if (status === 'failed') return 'Ошибка при обучении'
       return status
+    })
+    
+    const getProgressPercentage = computed(() => {
+      if (!store.trainingStatus) return 0
+      const progress = store.trainingStatus.progress ?? 0
+      const status = store.trainingStatus.status
+      
+      // Если статус completed/complete, но прогресс не 100, принудительно показываем 100
+      if ((status === 'completed' || status === 'complete') && progress < 100) {
+        return 100
+      }
+      
+      return Math.max(0, Math.min(100, progress))
     })
     const canStartTraining = computed(() => {
       return store.selectedFile !== null &&
@@ -271,18 +286,27 @@ export default defineComponent({
           throw new Error('Failed to fetch training status')
         }
         const status = await response.json()
-        if (status.progress === 100) {
-          console.log('=== TRAINING COMPLETE ===', status)
-        }
+        
+        // Обновляем статус в store
         store.setTrainingStatus(status)
-        // --- ДОБАВЛЕНО: если есть prediction_head, обновить predictionRows ---
+        
+        // Обновляем prediction_head, если есть
         if (status.prediction_head && Array.isArray(status.prediction_head) && status.prediction_head.length > 0) {
           store.setPredictionRows(status.prediction_head)
         }
+        
+        // Проверяем завершение обучения
         if (["completed", "failed", "complete"].includes(status.status)) {
           if (statusCheckInterval) {
             clearInterval(statusCheckInterval)
             statusCheckInterval = null
+          }
+          
+          // Дополнительная проверка для completed статуса
+          if (status.status === "completed" && status.progress !== 100) {
+            // Принудительно устанавливаем 100% прогресс
+            status.progress = 100
+            store.setTrainingStatus(status)
           }
         }
       } catch (error) {
@@ -526,6 +550,7 @@ export default defineComponent({
       isTraining,
       buttonText,
       getStatusMessage,
+      getProgressPercentage,
       showAutoSaveButton,
       canAutoSaveToDb,
       // modal

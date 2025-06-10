@@ -20,7 +20,7 @@
     </div>
 
     <div v-if="numericStats" class="stats-container">
-      <h3>{{ customTitle || 'Статистика Train' }}</h3>
+      <h3>{{ customTitle || 'Статистика данных для обучения' }}</h3>
       <h4>Основная статистика для числовых столбцов:</h4>
       <table class="stats-table">
         <thead>

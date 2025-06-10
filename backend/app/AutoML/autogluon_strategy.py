@@ -67,6 +67,30 @@ class AutoGluonStrategy(AutoMLStrategy):
             if metric_cols:
                 leaderboard = leaderboard.dropna(subset=metric_cols, how='all')
             leaderboard.to_csv(leaderboard_path, index=False)
+            logging.info(f"[train_model] Лидерборд сохранён: {leaderboard_path}")
+
+            # Save model metadata, including WeightedEnsemble_L2 weights if present
+            model_metadata = training_params.model_dump()
+            
+            def convert_weights(weights):
+                # Преобразует все значения в float для сериализации
+                return {k: float(v) for k, v in weights.items()}
+            # Check for WeightedEnsemble_L2 in leaderboard
+            if "WeightedEnsemble_L2" in leaderboard["model"].values:
+                try:
+                    weighted_ensemble_model = predictor._trainer.load_model("WeightedEnsemble_L2")
+                    logging.info(weighted_ensemble_model)
+                    model_to_weight = weighted_ensemble_model._get_model_weights()
+                    logging.info(model_to_weight)
+                    if model_to_weight is not None:
+                        model_metadata["WeightedEnsemble_L2_weights"] = convert_weights(model_to_weight)
+                except Exception as e:
+                    logging.warning(f"[train_model] Не удалось получить веса WeightedEnsemble_L2: {e}")
+
+            with open(os.path.join(model_path, "model_metadata.json"), "w", encoding="utf-8") as f:
+                json.dump(model_metadata, f, indent=2)
+
+            logging.info(f"[train_model] Метаданные модели сохранены.")
             # Сохраняем fit_summary
             fit_summary = predictor.fit_summary()
             # Сохраняем feature importance

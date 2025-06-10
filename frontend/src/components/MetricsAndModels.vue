@@ -74,7 +74,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch } from 'vue'
+import { defineComponent, ref, computed, watch, onMounted } from 'vue'
 import { useMainStore } from '../stores/mainStore'
 
 const metricsByTask: Record<string, string[]> = {
@@ -128,18 +128,37 @@ export default defineComponent({
       set: (value: string) => store.setProblemType(value || 'auto')
     })
 
-    // Используем availableMetrics из store
-    const availableMetrics = store.availableMetrics
+    // Доступные метрики в зависимости от задачи
+    const availableMetrics = computed(() => {
+      const task = selectedTaskType.value;
+      const allowed = metricsByTask[task] || metricsByTask['auto'];
+      return allowed.map(key => ({ key, label: metricsDict[key] || key }));
+    });
+
     const selectedMetric = computed({
       get: () => store.selectedMetric,
       set: (val: string) => store.setSelectedMetric(val)
     })
 
-    // Если выбранная метрика не входит в доступные для задачи, сбрасываем на первую
+    // Если выбранная метрика не входит в доступные для задачи, выбираем MSE если доступен, иначе первую
     watch([selectedTaskType, selectedMetric], ([task, metric], [oldTask, oldMetric]) => {
       const allowed = metricsByTask[task] || metricsByTask['auto']
       if (!allowed.includes(metric)) {
-        store.setSelectedMetric(allowed[0])
+        // Пытаемся выбрать MSE по умолчанию, если доступен
+        const defaultMetric = allowed.includes('mean_squared_error') ? 'mean_squared_error' : allowed[0]
+        store.setSelectedMetric(defaultMetric)
+      }
+    })
+
+    // Инициализация метрики по умолчанию при монтировании
+    onMounted(() => {
+      const currentTask = selectedTaskType.value
+      const allowed = metricsByTask[currentTask] || metricsByTask['auto']
+      
+      // Если метрика не задана или не доступна для текущей задачи, устанавливаем MSE
+      if (!store.selectedMetric || !allowed.includes(store.selectedMetric)) {
+        const defaultMetric = allowed.includes('mean_squared_error') ? 'mean_squared_error' : allowed[0]
+        store.setSelectedMetric(defaultMetric)
       }
     })
 
@@ -156,7 +175,6 @@ export default defineComponent({
     }
 
     const presetsList = [
-      'fast_training',
       'medium_quality',
       'high_quality',
       'best_quality',

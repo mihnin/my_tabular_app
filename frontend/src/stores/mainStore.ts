@@ -18,7 +18,7 @@ export const useMainStore = defineStore('main', () => {
   const considerRussianHolidays = ref(false)
   const fillMethod = ref('mean')
   const groupingColumns = ref<string[]>([])
-  const selectedMetric = ref('MAE (Mean absolute error)')
+  const selectedMetric = ref('mean_squared_error')
   const selectedModels = ref<string[]>(['*'])
   const selectedPreset = ref('high_quality')
   const timeLimit = ref<number | null>(null)

@@ -193,7 +193,6 @@ async def _get_pk_columns(conn: asyncpg.Connection, db_schema: str, table_name: 
         pk_records = await conn.fetch(query, db_schema, table_name)
         return [record['column_name'] for record in pk_records]
     except Exception as e:
-        print(f"Ошибка при получении первичного ключа для {db_schema}.{table_name}: {e}")
         return []
     
 @read_only_guard
@@ -387,26 +386,35 @@ async def get_user_table_names(username: str, password: str) -> List[str]:
 async def get_user_table_names_by_schema(username: str, password: str) -> dict:
     """
     Возвращает словарь {schema: [table1, table2, ...]} с таблицами, к которым пользователь имеет SELECT.
+    Включает все схемы, к которым пользователь имеет право USAGE или является владельцем.
     """
+    # Make sure to await get_connection as it returns an awaitable object
     async with get_connection(username, password) as conn:
-        # Получаем все схемы, кроме служебных
+        result = {}
+
+        # Получаем все схемы, к которым пользователь имеет право USAGE,
+        # или которые принадлежат текущему пользователю (current_user), кроме служебных
         schemas_query = """
-            SELECT schema_name FROM information_schema.schemata
-            WHERE schema_name NOT IN ('pg_catalog', 'information_schema')
+            SELECT nspname AS schema_name
+            FROM pg_namespace
+            WHERE nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+            AND has_schema_privilege(current_user, nspname, 'USAGE');
         """
         schemas = await conn.fetch(schemas_query)
-        result = {}
+        print(schemas)
         for row in schemas:
             schema = row['schema_name']
             tables_query = f'''
                 SELECT tablename
                 FROM pg_tables
                 WHERE schemaname = $1
-                AND has_table_privilege(current_user, concat(schemaname, '.', tablename), 'SELECT')
+                  AND has_table_privilege(current_user, concat(schemaname, '.', tablename), 'SELECT');
             '''
             tables = await conn.fetch(tables_query, schema)
+            
             table_names = [record['tablename'] for record in tables]
-            result[schema] = table_names  # всегда добавляем схему, даже если список пустой
+            result[schema] = table_names
+            
         return result
 
 # --- Проверка подключения к БД ---
@@ -479,7 +487,6 @@ async def check_df_matches_table_schema(df: pd.DataFrame, db_schema: str, table_
             
     except Exception as e:
         # Логируем исключение для отладки
-        print(f"Ошибка при проверке соответствия схемы DataFrame: {e}")
         return False
 
 # --- Получение количества всех таблиц в схеме ---

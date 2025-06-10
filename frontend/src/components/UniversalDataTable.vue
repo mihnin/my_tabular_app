@@ -1,7 +1,6 @@
-<template>
-  <div class="data-table-block" v-if="data && data.length">
+<template>  <div class="data-table-block" v-if="data && data.length">
     <div class="success-banner" :style="bannerStyle">
-      {{ title }}-файл загружен! Строк: {{ totalRows }}, колонок: {{ columns.length }}
+      {{ title }} загружены! Строк: {{ totalRows }}, колонок: {{ columns.length }}
     </div>
     <DataTable :data="data" :customTitle="statsTitle" />
   </div>

@@ -5,7 +5,7 @@
     <div class="main-content">
       <div class="header">
         <h1>Версия 3.0</h1>
-        <h2>Бизнес-приложение для прогнозирования временных рядов</h2>
+        <h2>Бизнес-приложение для прогнозирования табличных данных</h2>
       </div>
       <Instruction :isVisible="currentPage === 'Инструкция'" @close="handlePageChange('Обучение')" />
       <MainPage v-if="currentPage !== 'Инструкция'" />
@@ -39,13 +39,12 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      document.title = 'Прогнозирование временных рядов';
+      document.title = 'Прогнозирование табличных данных';
     });
 
     watch(
       () => store.predictionRows,
       (val) => {
-        console.log('App.vue predictionRows watch triggered:', val);
       },
       { deep: true }
     )

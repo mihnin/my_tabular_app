@@ -133,8 +133,16 @@ export default defineComponent({
     const store = useMainStore()
 
     const canSaveButton = computed(() => {
-      // Кнопки должны быть активны, если есть sessionId и predictionRows (даже если canSave всегда true)
-      return !!store.sessionId && store.predictionRows.length > 0
+      // Кнопки должны быть активны, если есть sessionId и:
+      // 1. predictionRows больше 0, ИЛИ
+      // 2. статус completed/complete и progress 100
+      const hasSession = !!store.sessionId
+      const hasPredictionRows = store.predictionRows.length > 0
+      const isCompleted = store.trainingStatus && 
+                         (store.trainingStatus.status === 'completed' || store.trainingStatus.status === 'complete') &&
+                         store.trainingStatus.progress === 100
+      
+      return hasSession && (hasPredictionRows || isCompleted)
     })
 
     // --- DB Save Modal State ---

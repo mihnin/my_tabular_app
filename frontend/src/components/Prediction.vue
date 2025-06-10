@@ -46,11 +46,11 @@ export default defineComponent({
       }
       isLoading.value = true;
       try {
-        // Fetch only the preview (first 10 rows) as JSON
-        const response = await fetch(`http://localhost:8000/predict_head/${sessionId}`);
+        // Запускаем процесс прогноза через /predict (получаем 10 строк в JSON)
+        const response = await fetch(`http://localhost:8000/predict/${sessionId}`);
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error('Ошибка при получении превью прогноза: ' + errorText);
+          throw new Error('Ошибка при запуске прогноза: ' + errorText);
         }
         const data = await response.json();
         if (data && Array.isArray(data.prediction_head)) {
@@ -59,7 +59,7 @@ export default defineComponent({
           store.setPredictionRows([]);
         }
       } catch (error) {
-        alert(`Ошибка при получении превью прогноза: ${error instanceof Error ? error.message : String(error)}`);
+        alert(`Ошибка при запуске прогноза: ${error instanceof Error ? error.message : String(error)}`);
         store.setPredictionRows([]);
       } finally {
         setTimeout(() => { isLoading.value = false; }, 300);

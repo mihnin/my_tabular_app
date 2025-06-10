@@ -2,7 +2,7 @@
   <div class="file-uploader">
     <h3 class="section-title">Настройка обучения</h3>
 
-    <!-- Тренировочные данные (accordion) -->
+    <!-- Данные для обучения (accordion) -->
     <div class="accordion-section">
       <button class="accordion-toggle train-toggle" @click="onTrainAccordionClick">
         <span>{{ trainOpen ? '▼' : '►' }}</span>
@@ -63,14 +63,14 @@
               @click="downloadFromApp"
               style="width: 100%; margin-top: 0.5rem; margin-bottom: 10px;"
             >
-              Скачать тренировочные данные из приложения
+              ⬇️ Скачать данные для обучения из приложения
             </button>
           </div>
         </div>
       </transition>
     </div>
 
-    <!-- Тестовые данные (accordion) -->
+    <!-- Данные для прогноза (accordion) -->
     <div class="accordion-section">
       <button class="accordion-toggle test-toggle" @click="onTestAccordionClick">
         <span>{{ testOpen ? '▼' : '►' }}</span>
@@ -131,7 +131,7 @@
               @click="downloadTestFromApp"
               style="width: 100%; margin-top: 0.5rem; margin-bottom: 10px;"
             >
-              Скачать тестовые данные из приложения
+              ⬇️ Скачать данные для прогноза из приложения
             </button>
           </div>
         </div>
@@ -202,12 +202,12 @@
       </div>
     </Teleport>
 
-    <!-- Модальное окно выбора таблицы из БД для тестовых данных -->
+    <!-- Модальное окно выбора таблицы из БД для данных для прогноза -->
     <Teleport to="body">
       <div v-if="testDbModalVisible" class="db-modal-overlay" @click="closeTestDbModal">
         <div class="db-modal" @click.stop>
           <button class="close-btn" @click="closeTestDbModal">×</button>
-          <h3 class="section-title" style="margin-bottom:1.5rem; border-bottom: none; font-size: 1.3rem;">Выбор таблицы (Тестовые)</h3>
+          <h3 class="section-title" style="margin-bottom:1.5rem; border-bottom: none; font-size: 1.3rem;">Выбор таблицы (Данные для прогноза)</h3>
           <div class="db-modal-table-area">
             <div v-if="testDbTablesLoading" style="color:#888;">Загрузка таблиц...</div>
             <div v-else-if="Object.values(testDbTablesBySchema).flat().length === 0" style="color:#f44336;">Нет доступных таблиц</div>
@@ -335,7 +335,7 @@
       </div>
     </Teleport>
 
-    <!-- Модальное окно успешной загрузки файла в БД -->
+    <!-- Модальное окно успешной загрузки файла в БД (данные для обучения) -->
     <Teleport to="body">
       <div v-if="uploadSuccessModalVisible" class="success-modal-overlay">
         <div class="success-modal">
@@ -345,17 +345,62 @@
               <path d="M24 42L36 54L56 34" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <div class="success-text">Файл успешно загружен в БД</div>
+          <div class="success-text">Данные успешно загружены в БД</div>
         </div>
       </div>
     </Teleport>
 
-    <!-- Модальное окно для загрузки тестового файла в БД -->
+    <!-- Модальное окно успешной загрузки данных из БД (данные для обучения) -->
+    <Teleport to="body">
+      <div v-if="downloadSuccessModalVisible" class="success-modal-overlay">
+        <div class="success-modal">
+          <div class="success-icon">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="40" cy="40" r="40" fill="#4CAF50"/>
+              <path d="M24 42L36 54L56 34" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="success-text">Данные успешно загружены <b>из БД</b></div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Модальное окно успешной загрузки файла в БД (данные для прогноза) -->
+    <Teleport to="body">
+      <div v-if="testUploadSuccessModalVisible" class="success-modal-overlay">
+        <div class="success-modal">
+          <div class="success-icon">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="40" cy="40" r="40" fill="#4CAF50"/>
+              <path d="M24 42L36 54L56 34" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="success-text">Данные для прогноза успешно загружены <b>в БД</b></div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Модальное окно успешной загрузки данных для прогноза из БД -->
+    <Teleport to="body">
+      <div v-if="testDownloadSuccessModalVisible" class="success-modal-overlay">
+        <div class="success-modal">
+          <div class="success-icon">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="40" cy="40" r="40" fill="#4CAF50"/>
+              <path d="M24 42L36 54L56 34" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="success-text">Данные для прогноза успешно загружены <b>из БД</b></div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Модальное окно для загрузки файла в БД (данные для прогноза) -->
     <Teleport to="body">
       <div v-if="testUploadToDbModalVisible" class="db-modal-overlay" @click="closeTestUploadToDbModal">
-        <div class="db-modal upload-to-db-modal" id="test-upload-to-db-modal" @click.stop style="min-width: 320px; max-width: 420px; min-height: 220px; max-height: 90vh; padding: 1.2rem 1.2rem 1rem 1.2rem; box-sizing: border-box; font-size: 0.98rem; display: flex; flex-direction: column;">
+        <div class="db-modal upload-to-db-modal" id="test-upload-to-db-modal" @click.stop>
           <button class="close-btn" @click="closeTestUploadToDbModal">×</button>
-          <h3 style="margin-bottom:1rem">Загрузка тестового файла в БД</h3>
+          <h3 style="margin-bottom:1rem">Загрузка файла для прогноза в БД</h3>
           <!-- Выбор режима: новая таблица или существующая -->
           <div style="margin-bottom:1rem; display:flex; gap:1.5rem; align-items:center;">
             <label style="display:flex; align-items:center; gap:6px; font-weight:500;">
@@ -408,7 +453,6 @@
               <option v-for="table in filteredTestUploadDbTables" :key="table" :value="table">{{ table }}</option>
             </select>
           </div>
-
           <div class="upload-to-db-footer">
             <button class="upload-to-db-btn" :disabled="!testUploadTableName || testUploadToDbLoading" @click="uploadTestFileToDb">
               <span v-if="testUploadToDbLoading" class="spinner-wrap"><span class="spinner"></span>Загрузка...</span>
@@ -457,6 +501,7 @@ export default defineComponent({
     const uploadToDbLoading = ref(false)
     const uploadToDbError = ref('')
     const uploadSuccessModalVisible = ref(false)
+    const downloadSuccessModalVisible = ref(false) // <--- новое состояние для успешной загрузки из БД
     const selectedPrimaryKeys = ref<string[]>([]) // <--- новое состояние для выбранных первичных ключей
     const dbSaveMode = ref<'new' | 'existing'>('new') // <--- состояние для режима сохранения в БД
     const tableData = computed(() => store.tableData)
@@ -497,6 +542,7 @@ export default defineComponent({
     const testUploadToDbLoading = ref(false)
     const testUploadToDbError = ref('')
     const testUploadSuccessModalVisible = ref(false)
+    const testDownloadSuccessModalVisible = ref(false) // <--- новое состояние для успешной загрузки из БД (тестовые)
     const testSelectedPrimaryKeys = ref<string[]>([])
     const testDbSaveMode = ref<'new' | 'existing'>('new')
     const testUploadDbTables = ref<string[]>([])
@@ -786,6 +832,8 @@ export default defineComponent({
         store.setFileLoaded(true) // <--- добавлено для синхронизации состояния
         emit('file-loaded', store.tableData)
         closeDbModal()
+        downloadSuccessModalVisible.value = true
+        setTimeout(() => { downloadSuccessModalVisible.value = false }, 1800)
       } catch (error) {
         dbError.value = 'Ошибка загрузки данных из БД: ' + (error && typeof error === 'object' && 'message' in error ? error.message : String(error))
       } finally {
@@ -838,7 +886,7 @@ export default defineComponent({
       try {
         const formData = new FormData()
         formData.append('file', selectedFile.value)
-        formData.append('schema', selectedUploadDbSchema.value)
+        formData.append('db_schema', selectedUploadDbSchema.value) // <-- исправлено: schema -> db_schema
         formData.append('table_name', uploadTableName.value)
         formData.append('primary_keys', JSON.stringify(selectedPrimaryKeys.value))
         formData.append('dbSaveMode', dbSaveMode.value)
@@ -1077,6 +1125,8 @@ export default defineComponent({
         if (store.setSelectedTestFile) store.setSelectedTestFile(file)
         if (store.setTestFileLoaded) store.setTestFileLoaded(true)
         closeTestDbModal()
+        testDownloadSuccessModalVisible.value = true
+        setTimeout(() => { testDownloadSuccessModalVisible.value = false }, 1800)
       } catch (error: any) {
         testDbError.value = 'Ошибка загрузки данных из БД: ' + (error?.message || error)
       } finally {
@@ -1180,7 +1230,7 @@ export default defineComponent({
       try {
         const formData = new FormData()
         formData.append('file', selectedTestFile.value)
-        formData.append('schema', testSelectedUploadDbSchema.value)
+        formData.append('db_schema', testSelectedUploadDbSchema.value)
         formData.append('table_name', testUploadTableName.value)
         formData.append('primary_keys', JSON.stringify(testSelectedPrimaryKeys.value))
         formData.append('dbSaveMode', testDbSaveMode.value)
@@ -1307,6 +1357,7 @@ export default defineComponent({
       uploadFileToDb,
       fileLoaded,
       uploadSuccessModalVisible,
+      downloadSuccessModalVisible,
       selectedPrimaryKeys,
       dbSaveMode,
       tableData,
@@ -1355,6 +1406,7 @@ export default defineComponent({
       closeTestUploadToDbModal,
       uploadTestFileToDb,
       testUploadSuccessModalVisible,
+      testDownloadSuccessModalVisible,
       testSelectedPrimaryKeys,
       testDbSaveMode,
       testUploadDbTables,
@@ -1774,6 +1826,18 @@ button:hover {
   display: flex;
   flex-direction: column;
 }
+
+.db-modal.upload-to-db-modal,
+.db-modal#test-upload-to-db-modal {
+  width: 480px;
+  max-width: 95vw;
+  min-width: 320px;
+}
+
+.upload-to-db-modal-test {  
+  min-height: 220px;
+}
+
 .upload-to-db-footer {
   margin-top: auto;
   display: flex;

@@ -74,23 +74,14 @@ def save_prediction(output, session_id):
 
 @router.get("/predict/{session_id}")
 async def predict_tabular_endpoint(session_id: str):
-    """Сделать прогноз по id сессии и вернуть xlsx файл с результатом. Сохраняет только Parquet!"""
+    """Сделать прогноз по id сессии: сохранить полный прогноз в Parquet, вернуть только 10 строк в JSON."""
     preds = await asyncio.to_thread(predict_tabular, session_id)
     session_path = get_session_path(session_id)
     prediction_parquet_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
     preds.to_parquet(prediction_parquet_path, index=False)
-    # Формируем Excel на лету
-    output = BytesIO()
-    preds.to_excel(output, index=False)
-    output.seek(0)
-    logging.info(f"[predict_tabular] Прогноз сохранён в Parquet и отправлен как Excel (session_id={session_id})")
-    return Response(
-        content=output.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": f"attachment; filename=prediction_{session_id}.xlsx"
-        }
-    )
+    # Возвращаем только первые 10 строк как JSON
+    head = preds.head(10).to_dict(orient="records")
+    return {"prediction_head": head}
 
 @router.get("/download_prediction/{session_id}")
 def download_prediction_file(session_id: str):
@@ -142,6 +133,16 @@ def download_prediction_file(session_id: str):
         # Второй лист — leaderboard
         if df_leaderboard is not None:
             df_leaderboard.to_excel(writer, sheet_name="Leaderboard", index=False)
+            # Всегда выделяем строку с максимальным score_val зелёным цветом
+            try:
+                ws = writer.sheets["Leaderboard"]
+                if "score_val" in df_leaderboard.columns:
+                    best_idx = df_leaderboard["score_val"].idxmax()
+                    excel_row = best_idx + 2  # 1-based, +1 for header
+                    format_green = writer.book.add_format({"bg_color": "#C6EFCE", "font_color": "#006100"})
+                    ws.set_row(excel_row - 1, None, format_green)
+            except Exception as e:
+                logging.warning(f"[download_prediction_file] Не удалось выделить лучшую строку в leaderboard: {e}")
         else:
             pd.DataFrame({"info": ["Leaderboard not found"]}).to_excel(writer, sheet_name="Leaderboard", index=False)
         # Третий лист — параметры обучения
@@ -166,6 +167,36 @@ def download_prediction_file(session_id: str):
                 pd.DataFrame({"info": [f"Feature importance error: {e}"]}).to_excel(writer, sheet_name="FeatureImportance", index=False)
         else:
             pd.DataFrame({"info": ["Feature importance not found"]}).to_excel(writer, sheet_name="FeatureImportance", index=False)
+        # Пятый лист — WeightedEnsemble (все уровни, без жёсткой привязки к L1/L2)
+        weighted_ensemble_path = os.path.join(session_path, "autogluon", "model_metadata.json")
+        if os.path.exists(weighted_ensemble_path):
+            try:
+                with open(weighted_ensemble_path, "r", encoding="utf-8") as f:
+                    model_metadata = json.load(f)
+                # Только WeightedEnsemble_L1_weights и WeightedEnsemble_L2_weights
+                ensemble_keys = [k for k in ("WeightedEnsemble_L1_weights", "WeightedEnsemble_L2_weights") if k in model_metadata]
+                if ensemble_keys:
+                    ws = writer.book.add_worksheet("WeightedEnsemble")
+                    row = 0
+                    for key in ensemble_keys:
+                        ws.write(row, 0, key.replace("_weights", ""))
+                        row += 1
+                        weights = model_metadata[key]
+                        if isinstance(weights, dict):
+                            ws.write(row, 0, "Model")
+                            ws.write(row, 1, "Weight")
+                            row += 1
+                            for model, weight in weights.items():
+                                ws.write(row, 0, f"  {model}")
+                                ws.write(row, 1, weight)
+                                row += 1
+                        else:
+                            ws.write(row, 0, "(weights not found or not a dict)")
+                            row += 1
+                        ws.write(row, 0, "")
+                        row += 1
+            except Exception as e:
+                logging.warning(f"[download_prediction_file] Не удалось добавить WeightedEnsemble: {e}")
     output.seek(0)
 
     logging.info(f"[download_prediction_file] Мульти-листовой Excel-файл отправлен: prediction_{session_id}.xlsx")
