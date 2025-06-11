@@ -1,5 +1,35 @@
 <template>
   <div v-if="isVisible" class="instruction-block">
+    <div class="excel-format-info" style="margin-bottom:1rem;">
+      <h2 style="margin-top:0;">Требования к формату Excel для обучения</h2>
+      <ul>
+        <li>Данные для обучения должны быть размещены <b>на первом листе</b> Excel-файла.</li>
+        <li>В <b>первой строке</b> должны быть указаны <b>названия всех колонок</b> (features и целевая переменная).</li>
+        <li>Данные должны начинаться <b>со второй строки</b> (первая строка — только заголовки).</li>
+        <li>В каждой колонке должны быть значения одного типа (числа, строки, даты и т.д.).</li>
+        <li>Не допускается наличие объединённых ячеек, скрытых строк/столбцов, формул и других листов с данными.</li>
+        <li>Файл не должен содержать пустых строк между заголовком и данными.</li>
+        <li>Рекомендуется использовать расширения <b>.xlsx</b> или <b>.xls</b>.</li>
+      </ul>
+    </div>
+    <div class="excel-files-info" style="margin-bottom:2.5rem;">
+      <h3>Файл для обучения</h3>
+      <ul>
+        <li>Должен содержать <b>все признаки (features)</b> и <b>целевую переменную</b> (target).</li>
+        <li>В каждой строке должны быть заполнены значения и для признаков, и для целевой переменной.</li>
+        <li>Целевая переменная должна быть указана в первой строке (заголовке) вместе с остальными колонками.</li>
+      </ul>
+      <h3>Файл для прогноза</h3>
+      <ul>
+        <li>Должен содержать <b>те же признаки (features)</b>, что и файл для обучения.</li>
+        <li>Колонка с целевой переменной <b>может отсутствовать</b> или быть <b>пустой</b> (без значений).</li>
+        <li>Порядок и названия колонок должны совпадать с файлом для обучения (кроме целевой переменной).</li>
+      </ul>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:1.2rem;">
+        <button class="example-btn" @click="downloadExample('train')">Скачать пример данных для обучения</button>
+        <button class="example-btn" @click="downloadExample('predict')">Скачать пример данных для прогноза</button>
+      </div>
+    </div>
     <h2>Инструкция по обучению и прогнозу на табличных данных</h2>
     <div class="instruction-steps">
       <div class="step">
@@ -101,7 +131,24 @@ export default defineComponent({
       required: true
     }
   },
-  emits: ['close']
+  emits: ['close'],
+  methods: {
+    downloadExample(type: 'train' | 'predict') {
+      let url = ''
+      if (type === 'train') {
+        url = 'http://localhost:8000/instruction/example_train.xlsx'
+      } else {
+        url = 'http://localhost:8000/instruction/example_predict.xlsx'
+      }
+      // Новый способ скачивания без открытия вкладки
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', '')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
 })
 </script>
 
@@ -163,6 +210,26 @@ export default defineComponent({
 
 .tip b {
   color: #1b5e20;
+}
+
+.excel-format-info {
+  margin-top: 1rem;
+}
+
+.example-btn {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.example-btn:disabled {
+  background: #007bff;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 600px) {
