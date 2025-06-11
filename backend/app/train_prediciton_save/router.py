@@ -86,19 +86,16 @@ async def run_training_prediction_async(
         logging.info(f"[run_training_prediction_async] Обучение завершено успешно для session_id={session_id}")
 
         # 2. Прогноз
-        # Импортируем predict_tabular из prediction.router
-        # predict_tabular(session_id: str)
         prediction_df = await asyncio.to_thread(predict_tabular, session_id)
         prediction_parquet_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
         prediction_df.to_parquet(prediction_parquet_path, index=False)
         # Restore prediction_head logic: save first 10 rows for preview
         prediction_head = prediction_df.head(10).to_dict(orient="records")
-        status.update({
-            "progress": 100,
-            "status": "completed",
-            "prediction_file": prediction_parquet_path,
-            "prediction_head": prediction_head
-        })
+        # --- АТОМАРНОЕ обновление статуса: только после формирования prediction_head ---
+        status["prediction_file"] = prediction_parquet_path
+        status["prediction_head"] = prediction_head
+        status["progress"] = 100
+        status["status"] = "completed"
         save_session_metadata(session_id, status)
         training_sessions[session_id] = status
         logging.info(f"[run_training_prediction_async] Прогноз завершен и сохранен для session_id={session_id}")
