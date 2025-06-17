@@ -1,0 +1,593 @@
+2025-06-06 16:10:19 [INFO] root: [run_training_async] Запуск обучения для session_id=6124f1cd-8f9d-4354-8667-e0130f852c51, файл: iris.xlsx
+2025-06-06 16:10:19 [INFO] root: [run_training_async] Каталог модели создан: D:\work\tabular\my_tabular_app\backend\app\training_sessions\6124f1cd-8f9d-4354-8667-e0130f852c51\model
+2025-06-06 16:10:19 [INFO] root: [run_training_async] Передача задачи обучения в пул потоков...
+2025-06-06 16:10:19 [INFO] root: [train_model] Начало подготовки данных для session_id=6124f1cd-8f9d-4354-8667-e0130f852c51
+2025-06-06 16:10:19 [INFO] root: [train_model] Пропущенные значения обработаны методом: mean
+2025-06-06 16:10:19 [INFO] root: [AutoGluonStrategy] Старт обучения TabularPredictor для session_id=6124f1cd-8f9d-4354-8667-e0130f852c51
+2025-06-06 16:10:19 [ERROR] root: [AutoGluonStrategy] Ошибка обучения: Unknown eval_metric 'MAE (Mean absolute error)'. Valid metrics for problem_type='multiclass':
+['accuracy', 'acc', 'balanced_accuracy', 'mcc', 'log_loss', 'nll', 'pac', 'pac_score', 'quadratic_kappa', 'precision_macro', 'precision_micro', 'precision_weighted', 'recall_macro', 'recall_micro', 'recall_weighted', 'f1_macro', 'f1_micro', 'f1_weighted', 'roc_auc_ovo', 'roc_auc_ovo_macro', 'roc_auc_ovo_weighted', 'roc_auc_ovr', 'roc_auc_ovr_macro', 'roc_auc_ovr_micro', 'roc_auc_ovr_weighted']
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 44, in train
+    predictor = TabularPredictor(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 212, in __init__
+    self._learner: AbstractTabularLearner = learner_type(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\default_learner.py", line 32, in __init__
+    super().__init__(**kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\abstract_learner.py", line 64, in __init__
+    self.eval_metric = get_metric(eval_metric, self.problem_type, "eval_metric")
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\core\metrics\__init__.py", line 796, in get_metric
+    raise ValueError(
+ValueError: Unknown eval_metric 'MAE (Mean absolute error)'. Valid metrics for problem_type='multiclass':
+['accuracy', 'acc', 'balanced_accuracy', 'mcc', 'log_loss', 'nll', 'pac', 'pac_score', 'quadratic_kappa', 'precision_macro', 'precision_micro', 'precision_weighted', 'recall_macro', 'recall_micro', 'recall_weighted', 'f1_macro', 'f1_micro', 'f1_weighted', 'roc_auc_ovo', 'roc_auc_ovo_macro', 'roc_auc_ovo_weighted', 'roc_auc_ovr', 'roc_auc_ovr_macro', 'roc_auc_ovr_micro', 'roc_auc_ovr_weighted']
+2025-06-06 16:10:19 [ERROR] root: [train_model] Ошибка в процессе обучения: Unknown eval_metric 'MAE (Mean absolute error)'. Valid metrics for problem_type='multiclass':
+['accuracy', 'acc', 'balanced_accuracy', 'mcc', 'log_loss', 'nll', 'pac', 'pac_score', 'quadratic_kappa', 'precision_macro', 'precision_micro', 'precision_weighted', 'recall_macro', 'recall_micro', 'recall_weighted', 'f1_macro', 'f1_micro', 'f1_weighted', 'roc_auc_ovo', 'roc_auc_ovo_macro', 'roc_auc_ovo_weighted', 'roc_auc_ovr', 'roc_auc_ovr_macro', 'roc_auc_ovr_micro', 'roc_auc_ovr_weighted']
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 150, in train_model
+    strategy.train(df2, training_params, session_id)
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 44, in train
+    predictor = TabularPredictor(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 212, in __init__
+    self._learner: AbstractTabularLearner = learner_type(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\default_learner.py", line 32, in __init__
+    super().__init__(**kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\abstract_learner.py", line 64, in __init__
+    self.eval_metric = get_metric(eval_metric, self.problem_type, "eval_metric")
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\core\metrics\__init__.py", line 796, in get_metric
+    raise ValueError(
+ValueError: Unknown eval_metric 'MAE (Mean absolute error)'. Valid metrics for problem_type='multiclass':
+['accuracy', 'acc', 'balanced_accuracy', 'mcc', 'log_loss', 'nll', 'pac', 'pac_score', 'quadratic_kappa', 'precision_macro', 'precision_micro', 'precision_weighted', 'recall_macro', 'recall_micro', 'recall_weighted', 'f1_macro', 'f1_micro', 'f1_weighted', 'roc_auc_ovo', 'roc_auc_ovo_macro', 'roc_auc_ovo_weighted', 'roc_auc_ovr', 'roc_auc_ovr_macro', 'roc_auc_ovr_micro', 'roc_auc_ovr_weighted']
+2025-06-06 16:10:19 [ERROR] root: [run_training_async] Ошибка обучения в сессии 6124f1cd-8f9d-4354-8667-e0130f852c51: Error in training process: Unknown eval_metric 'MAE (Mean absolute error)'. Valid metrics for problem_type='multiclass':
+['accuracy', 'acc', 'balanced_accuracy', 'mcc', 'log_loss', 'nll', 'pac', 'pac_score', 'quadratic_kappa', 'precision_macro', 'precision_micro', 'precision_weighted', 'recall_macro', 'recall_micro', 'recall_weighted', 'f1_macro', 'f1_micro', 'f1_weighted', 'roc_auc_ovo', 'roc_auc_ovo_macro', 'roc_auc_ovo_weighted', 'roc_auc_ovr', 'roc_auc_ovr_macro', 'roc_auc_ovr_micro', 'roc_auc_ovr_weighted']
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 150, in train_model
+    strategy.train(df2, training_params, session_id)
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 44, in train
+    predictor = TabularPredictor(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 212, in __init__
+    self._learner: AbstractTabularLearner = learner_type(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\default_learner.py", line 32, in __init__
+    super().__init__(**kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\abstract_learner.py", line 64, in __init__
+    self.eval_metric = get_metric(eval_metric, self.problem_type, "eval_metric")
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\core\metrics\__init__.py", line 796, in get_metric
+    raise ValueError(
+ValueError: Unknown eval_metric 'MAE (Mean absolute error)'. Valid metrics for problem_type='multiclass':
+['accuracy', 'acc', 'balanced_accuracy', 'mcc', 'log_loss', 'nll', 'pac', 'pac_score', 'quadratic_kappa', 'precision_macro', 'precision_micro', 'precision_weighted', 'recall_macro', 'recall_micro', 'recall_weighted', 'f1_macro', 'f1_micro', 'f1_weighted', 'roc_auc_ovo', 'roc_auc_ovo_macro', 'roc_auc_ovo_weighted', 'roc_auc_ovr', 'roc_auc_ovr_macro', 'roc_auc_ovr_micro', 'roc_auc_ovr_weighted']
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 97, in run_training_async
+    await asyncio.to_thread(train_func)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 159, in train_model
+    raise Exception(f"Error in training process: {str(e)}")
+Exception: Error in training process: Unknown eval_metric 'MAE (Mean absolute error)'. Valid metrics for problem_type='multiclass':
+['accuracy', 'acc', 'balanced_accuracy', 'mcc', 'log_loss', 'nll', 'pac', 'pac_score', 'quadratic_kappa', 'precision_macro', 'precision_micro', 'precision_weighted', 'recall_macro', 'recall_micro', 'recall_weighted', 'f1_macro', 'f1_micro', 'f1_weighted', 'roc_auc_ovo', 'roc_auc_ovo_macro', 'roc_auc_ovo_weighted', 'roc_auc_ovr', 'roc_auc_ovr_macro', 'roc_auc_ovr_micro', 'roc_auc_ovr_weighted']
+2025-06-06 16:10:22 [INFO] root: [get_training_status] Запрос статуса для session_id=6124f1cd-8f9d-4354-8667-e0130f852c51
+2025-06-06 16:19:50 [INFO] root: [run_training_async] Запуск обучения для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b, файл: iris.xlsx
+2025-06-06 16:19:50 [INFO] root: [run_training_async] Каталог модели создан: D:\work\tabular\my_tabular_app\backend\app\training_sessions\686b68e4-c770-4df8-b3d3-1d986474fd2b\model
+2025-06-06 16:19:50 [INFO] root: [run_training_async] Передача задачи обучения в пул потоков...
+2025-06-06 16:19:50 [INFO] root: [train_model] Начало подготовки данных для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:19:50 [INFO] root: [train_model] Пропущенные значения обработаны методом: mean
+2025-06-06 16:19:50 [INFO] root: [AutoGluonStrategy] Старт обучения TabularPredictor для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:19:52 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:19:54 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:19:56 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:19:58 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:00 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:02 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:04 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:06 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:08 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:10 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:12 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:14 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:16 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:18 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:20 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:22 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:24 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:26 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:32 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:32 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:32 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:34 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:20:35 [ERROR] root: [AutoGluonStrategy] Ошибка обучения: Unknown model type specified in hyperparameters: '*'. Valid model types: ['RF', 'XT', 'KNN', 'GBM', 'CAT', 'XGB', 'NN_TORCH', 'LR', 'FASTAI', 'AG_TEXT_NN', 'AG_IMAGE_NN', 'AG_AUTOMM', 'FT_TRANSFORMER', 'TABPFN', 'TABPFNMIX', 'FASTTEXT', 'ENS_WEIGHTED', 'SIMPLE_ENS_WEIGHTED', 'IM_RULEFIT', 'IM_GREEDYTREE', 'IM_FIGS', 'IM_HSTREE', 'IM_BOOSTEDRULES', 'DUMMY']
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 50, in train
+    predictor.fit(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\core\utils\decorators.py", line 31, in _call
+    return f(*gargs, **gkwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 1301, in fit
+    self._fit(ag_fit_kwargs=ag_fit_kwargs, ag_post_fit_kwargs=ag_post_fit_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 1307, in _fit
+    self._learner.fit(**ag_fit_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\abstract_learner.py", line 159, in fit
+    return self._fit(X=X, X_val=X_val, **kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\default_learner.py", line 133, in _fit
+    trainer.fit(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\auto_trainer.py", line 135, in fit
+    self._train_multi_and_ensemble(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 3311, in _train_multi_and_ensemble
+    model_names_fit = self.train_multi_levels(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 506, in train_multi_levels
+    base_model_names, aux_models = self.stack_new_level(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 706, in stack_new_level
+    core_models = self.stack_new_level_core(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 825, in stack_new_level_core
+    models, model_args_fit = get_models_func(hyperparameters=models, **get_models_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\auto_trainer.py", line 31, in construct_model_templates
+    return get_preset_models(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\model_presets\presets.py", line 122, in get_preset_models
+    model_cfg = clean_model_cfg(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\model_presets\presets.py", line 181, in clean_model_cfg
+    raise AssertionError(f"Unknown model type specified in hyperparameters: '{model_type}'. Valid model types: {list(model_types.keys())}")
+AssertionError: Unknown model type specified in hyperparameters: '*'. Valid model types: ['RF', 'XT', 'KNN', 'GBM', 'CAT', 'XGB', 'NN_TORCH', 'LR', 'FASTAI', 'AG_TEXT_NN', 'AG_IMAGE_NN', 'AG_AUTOMM', 'FT_TRANSFORMER', 'TABPFN', 'TABPFNMIX', 'FASTTEXT', 'ENS_WEIGHTED', 'SIMPLE_ENS_WEIGHTED', 'IM_RULEFIT', 'IM_GREEDYTREE', 'IM_FIGS', 'IM_HSTREE', 'IM_BOOSTEDRULES', 'DUMMY']
+2025-06-06 16:20:35 [ERROR] root: [train_model] Ошибка в процессе обучения: Unknown model type specified in hyperparameters: '*'. Valid model types: ['RF', 'XT', 'KNN', 'GBM', 'CAT', 'XGB', 'NN_TORCH', 'LR', 'FASTAI', 'AG_TEXT_NN', 'AG_IMAGE_NN', 'AG_AUTOMM', 'FT_TRANSFORMER', 'TABPFN', 'TABPFNMIX', 'FASTTEXT', 'ENS_WEIGHTED', 'SIMPLE_ENS_WEIGHTED', 'IM_RULEFIT', 'IM_GREEDYTREE', 'IM_FIGS', 'IM_HSTREE', 'IM_BOOSTEDRULES', 'DUMMY']
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 149, in train_model
+    strategy.train(df2, training_params, session_id)
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 50, in train
+    predictor.fit(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\core\utils\decorators.py", line 31, in _call
+    return f(*gargs, **gkwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 1301, in fit
+    self._fit(ag_fit_kwargs=ag_fit_kwargs, ag_post_fit_kwargs=ag_post_fit_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 1307, in _fit
+    self._learner.fit(**ag_fit_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\abstract_learner.py", line 159, in fit
+    return self._fit(X=X, X_val=X_val, **kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\default_learner.py", line 133, in _fit
+    trainer.fit(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\auto_trainer.py", line 135, in fit
+    self._train_multi_and_ensemble(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 3311, in _train_multi_and_ensemble
+    model_names_fit = self.train_multi_levels(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 506, in train_multi_levels
+    base_model_names, aux_models = self.stack_new_level(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 706, in stack_new_level
+    core_models = self.stack_new_level_core(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 825, in stack_new_level_core
+    models, model_args_fit = get_models_func(hyperparameters=models, **get_models_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\auto_trainer.py", line 31, in construct_model_templates
+    return get_preset_models(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\model_presets\presets.py", line 122, in get_preset_models
+    model_cfg = clean_model_cfg(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\model_presets\presets.py", line 181, in clean_model_cfg
+    raise AssertionError(f"Unknown model type specified in hyperparameters: '{model_type}'. Valid model types: {list(model_types.keys())}")
+AssertionError: Unknown model type specified in hyperparameters: '*'. Valid model types: ['RF', 'XT', 'KNN', 'GBM', 'CAT', 'XGB', 'NN_TORCH', 'LR', 'FASTAI', 'AG_TEXT_NN', 'AG_IMAGE_NN', 'AG_AUTOMM', 'FT_TRANSFORMER', 'TABPFN', 'TABPFNMIX', 'FASTTEXT', 'ENS_WEIGHTED', 'SIMPLE_ENS_WEIGHTED', 'IM_RULEFIT', 'IM_GREEDYTREE', 'IM_FIGS', 'IM_HSTREE', 'IM_BOOSTEDRULES', 'DUMMY']
+2025-06-06 16:20:35 [ERROR] root: [run_training_async] Ошибка обучения в сессии 686b68e4-c770-4df8-b3d3-1d986474fd2b: Error in training process: Unknown model type specified in hyperparameters: '*'. Valid model types: ['RF', 'XT', 'KNN', 'GBM', 'CAT', 'XGB', 'NN_TORCH', 'LR', 'FASTAI', 'AG_TEXT_NN', 'AG_IMAGE_NN', 'AG_AUTOMM', 'FT_TRANSFORMER', 'TABPFN', 'TABPFNMIX', 'FASTTEXT', 'ENS_WEIGHTED', 'SIMPLE_ENS_WEIGHTED', 'IM_RULEFIT', 'IM_GREEDYTREE', 'IM_FIGS', 'IM_HSTREE', 'IM_BOOSTEDRULES', 'DUMMY']
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 149, in train_model
+    strategy.train(df2, training_params, session_id)
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 50, in train
+    predictor.fit(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\core\utils\decorators.py", line 31, in _call
+    return f(*gargs, **gkwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 1301, in fit
+    self._fit(ag_fit_kwargs=ag_fit_kwargs, ag_post_fit_kwargs=ag_post_fit_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\predictor\predictor.py", line 1307, in _fit
+    self._learner.fit(**ag_fit_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\abstract_learner.py", line 159, in fit
+    return self._fit(X=X, X_val=X_val, **kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\learner\default_learner.py", line 133, in _fit
+    trainer.fit(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\auto_trainer.py", line 135, in fit
+    self._train_multi_and_ensemble(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 3311, in _train_multi_and_ensemble
+    model_names_fit = self.train_multi_levels(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 506, in train_multi_levels
+    base_model_names, aux_models = self.stack_new_level(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 706, in stack_new_level
+    core_models = self.stack_new_level_core(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\abstract_trainer.py", line 825, in stack_new_level_core
+    models, model_args_fit = get_models_func(hyperparameters=models, **get_models_kwargs)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\auto_trainer.py", line 31, in construct_model_templates
+    return get_preset_models(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\model_presets\presets.py", line 122, in get_preset_models
+    model_cfg = clean_model_cfg(
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\autogluon\tabular\trainer\model_presets\presets.py", line 181, in clean_model_cfg
+    raise AssertionError(f"Unknown model type specified in hyperparameters: '{model_type}'. Valid model types: {list(model_types.keys())}")
+AssertionError: Unknown model type specified in hyperparameters: '*'. Valid model types: ['RF', 'XT', 'KNN', 'GBM', 'CAT', 'XGB', 'NN_TORCH', 'LR', 'FASTAI', 'AG_TEXT_NN', 'AG_IMAGE_NN', 'AG_AUTOMM', 'FT_TRANSFORMER', 'TABPFN', 'TABPFNMIX', 'FASTTEXT', 'ENS_WEIGHTED', 'SIMPLE_ENS_WEIGHTED', 'IM_RULEFIT', 'IM_GREEDYTREE', 'IM_FIGS', 'IM_HSTREE', 'IM_BOOSTEDRULES', 'DUMMY']
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 96, in run_training_async
+    await asyncio.to_thread(train_func)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 158, in train_model
+    raise Exception(f"Error in training process: {str(e)}")
+Exception: Error in training process: Unknown model type specified in hyperparameters: '*'. Valid model types: ['RF', 'XT', 'KNN', 'GBM', 'CAT', 'XGB', 'NN_TORCH', 'LR', 'FASTAI', 'AG_TEXT_NN', 'AG_IMAGE_NN', 'AG_AUTOMM', 'FT_TRANSFORMER', 'TABPFN', 'TABPFNMIX', 'FASTTEXT', 'ENS_WEIGHTED', 'SIMPLE_ENS_WEIGHTED', 'IM_RULEFIT', 'IM_GREEDYTREE', 'IM_FIGS', 'IM_HSTREE', 'IM_BOOSTEDRULES', 'DUMMY']
+2025-06-06 16:20:36 [INFO] root: [get_training_status] Запрос статуса для session_id=686b68e4-c770-4df8-b3d3-1d986474fd2b
+2025-06-06 16:22:35 [INFO] root: [run_training_async] Запуск обучения для session_id=877ecd16-55b2-4d01-90db-14991b24ce9c, файл: iris.xlsx
+2025-06-06 16:22:35 [INFO] root: [run_training_async] Каталог модели создан: D:\work\tabular\my_tabular_app\backend\app\training_sessions\877ecd16-55b2-4d01-90db-14991b24ce9c\model
+2025-06-06 16:22:35 [INFO] root: [run_training_async] Передача задачи обучения в пул потоков...
+2025-06-06 16:22:35 [ERROR] root: [run_training_async] Ошибка обучения в сессии 877ecd16-55b2-4d01-90db-14991b24ce9c: Executor shutdown has been called
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\base_events.py", line 636, in run_until_complete
+    self.run_forever()
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\base_events.py", line 603, in run_forever
+    self._run_once()
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\base_events.py", line 1909, in _run_once
+    handle._run()
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\uvicorn\server.py", line 69, in serve
+    with self.capture_signals():
+  File "D:\work\tabular\my_tabular_app\my_env\lib\contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\site-packages\uvicorn\server.py", line 330, in capture_signals
+    signal.raise_signal(captured_signal)
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 96, in run_training_async
+    await asyncio.to_thread(train_func)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\base_events.py", line 814, in run_in_executor
+    self._check_default_executor()
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\base_events.py", line 519, in _check_default_executor
+    raise RuntimeError('Executor shutdown has been called')
+RuntimeError: Executor shutdown has been called
+2025-06-06 16:22:38 [INFO] root: [get_training_status] Запрос статуса для session_id=877ecd16-55b2-4d01-90db-14991b24ce9c
+2025-06-06 16:24:43 [INFO] root: [run_training_async] Запуск обучения для session_id=868c8c7a-6911-4967-86da-77797a21b4d8, файл: iris.xlsx
+2025-06-06 16:24:43 [INFO] root: [run_training_async] Каталог модели создан: D:\work\tabular\my_tabular_app\backend\app\training_sessions\868c8c7a-6911-4967-86da-77797a21b4d8\model
+2025-06-06 16:24:43 [INFO] root: [run_training_async] Передача задачи обучения в пул потоков...
+2025-06-06 16:24:43 [INFO] root: [train_model] Начало подготовки данных для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:43 [INFO] root: [train_model] Пропущенные значения обработаны методом: mean
+2025-06-06 16:24:43 [INFO] root: [AutoGluonStrategy] Старт обучения TabularPredictor для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:45 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:47 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:50 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:51 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:53 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:55 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:57 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:24:59 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:01 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:03 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:05 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:07 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:09 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:11 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:13 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:15 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:17 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:19 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:21 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:23 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:25 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:27 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:29 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:31 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:33 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:35 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:37 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:39 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:41 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:43 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:45 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:47 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:49 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:51 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:53 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:55 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:57 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:25:59 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:26:01 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:26:03 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:26:05 [ERROR] root: [AutoGluonStrategy] Ошибка обучения: Object of type DataFrame is not JSON serializable
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 68, in train
+    json.dump(fit_summary, f, ensure_ascii=False, indent=2)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\__init__.py", line 179, in dump
+    for chunk in iterable:
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 431, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 438, in _iterencode
+    o = _default(o)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type DataFrame is not JSON serializable
+2025-06-06 16:26:05 [ERROR] root: [train_model] Ошибка в процессе обучения: Object of type DataFrame is not JSON serializable
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 149, in train_model
+    strategy.train(df2, training_params, session_id)
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 68, in train
+    json.dump(fit_summary, f, ensure_ascii=False, indent=2)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\__init__.py", line 179, in dump
+    for chunk in iterable:
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 431, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 438, in _iterencode
+    o = _default(o)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type DataFrame is not JSON serializable
+2025-06-06 16:26:05 [ERROR] root: [run_training_async] Ошибка обучения в сессии 868c8c7a-6911-4967-86da-77797a21b4d8: Error in training process: Object of type DataFrame is not JSON serializable
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 149, in train_model
+    strategy.train(df2, training_params, session_id)
+  File "D:\work\tabular\my_tabular_app\backend\app\AutoML\autogluon_strategy.py", line 68, in train
+    json.dump(fit_summary, f, ensure_ascii=False, indent=2)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\__init__.py", line 179, in dump
+    for chunk in iterable:
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 431, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 438, in _iterencode
+    o = _default(o)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\json\encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type DataFrame is not JSON serializable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 96, in run_training_async
+    await asyncio.to_thread(train_func)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "D:\work\tabular\my_tabular_app\my_env\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\work\tabular\my_tabular_app\backend\app\training\router.py", line 158, in train_model
+    raise Exception(f"Error in training process: {str(e)}")
+Exception: Error in training process: Object of type DataFrame is not JSON serializable
+2025-06-06 16:26:05 [INFO] root: [get_training_status] Запрос статуса для session_id=868c8c7a-6911-4967-86da-77797a21b4d8
+2025-06-06 16:27:22 [INFO] root: [run_training_async] Запуск обучения для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386, файл: iris.xlsx
+2025-06-06 16:27:22 [INFO] root: [run_training_async] Каталог модели создан: D:\work\tabular\my_tabular_app\backend\app\training_sessions\f6c40f53-5263-42d6-8ada-03811a1ef386\model
+2025-06-06 16:27:22 [INFO] root: [run_training_async] Передача задачи обучения в пул потоков...
+2025-06-06 16:27:22 [INFO] root: [train_model] Начало подготовки данных для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:22 [INFO] root: [train_model] Пропущенные значения обработаны методом: mean
+2025-06-06 16:27:22 [INFO] root: [AutoGluonStrategy] Старт обучения TabularPredictor для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:26 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:28 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:32 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:32 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:34 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:36 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:38 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:40 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:42 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:44 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:46 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:48 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:50 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:52 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:54 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:56 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:27:58 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:00 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:02 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:04 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:06 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:08 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:10 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:12 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:14 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:16 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:18 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:26 [INFO] root: [AutoGluonStrategy] Обучение завершено для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:26 [INFO] root: [train_model] Очистка памяти завершена.
+2025-06-06 16:28:26 [INFO] root: [run_training_async] Обучение завершено успешно для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:34 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:34 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:35 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:35 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:35 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:35 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:37 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:37 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:38 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:38 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:41 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:28:41 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:24 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:26 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:27 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:27 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:27 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:27 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:28 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:28 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:30 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:30 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:40 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:29:41 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:30:38 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:30:38 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:02 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:02 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:05 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:05 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:06 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:06 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:09 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:09 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:10 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:10 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:13 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:13 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:14 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:14 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:17 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:17 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:18 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:18 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:21 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:21 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:22 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:22 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:25 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:25 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:26 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:26 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:29 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:29 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:30 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:30 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:33 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:33 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:34 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:34 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:37 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:37 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:38 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:38 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:41 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:41 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:42 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:42 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:45 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:45 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:46 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:46 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:49 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:49 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:50 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:50 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:53 [INFO] root: [get_training_status] Запрос статуса для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:31:53 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=f6c40f53-5263-42d6-8ada-03811a1ef386
+2025-06-06 16:33:43 [INFO] root: [run_training_async] Запуск обучения для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1, файл: iris.xlsx
+2025-06-06 16:33:43 [INFO] root: [run_training_async] Каталог модели создан: D:\work\tabular\my_tabular_app\backend\app\training_sessions\54f369ac-15b6-488a-a63a-e8e05a1bdfe1\model
+2025-06-06 16:33:43 [INFO] root: [run_training_async] Передача задачи обучения в пул потоков...
+2025-06-06 16:33:43 [INFO] root: [train_model] Начало подготовки данных для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:43 [INFO] root: [train_model] Пропущенные значения обработаны методом: mean
+2025-06-06 16:33:43 [INFO] root: [AutoGluonStrategy] Старт обучения TabularPredictor для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:45 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:47 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:49 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:52 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:53 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:55 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:57 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:33:59 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:01 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:03 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:05 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:07 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:09 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:11 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:13 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:15 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:17 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:19 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:21 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:23 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:25 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:27 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:29 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:31 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:33 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:35 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:37 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:39 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:41 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:43 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:45 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:47 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:49 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:50 [INFO] root: [AutoGluonStrategy] Обучение завершено для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:50 [INFO] root: [train_model] Очистка памяти завершена.
+2025-06-06 16:34:50 [INFO] root: [run_training_async] Обучение завершено успешно для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:51 [INFO] root: [get_training_status] Запрос статуса для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1
+2025-06-06 16:34:51 [INFO] root: [get_training_status] Лидерборд добавлен к статусу для session_id=54f369ac-15b6-488a-a63a-e8e05a1bdfe1

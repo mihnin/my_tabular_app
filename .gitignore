@@ -169,3 +169,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+training_sessions
+requirements_lite.txt
+my_env
+
+backend/app/logs

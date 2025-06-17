@@ -1,7 +1,0 @@
-streamlit
-pandas
-plotly
-autogluon.tabular[all]
-openpyxl
-pyyaml
-pip-tools
