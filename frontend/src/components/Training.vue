@@ -144,6 +144,7 @@
 <script lang="ts">
 import { defineComponent, computed, ref, watch } from 'vue'
 import { useMainStore } from '../stores/mainStore'
+import { BACKEND_URL } from '../apiConfig'
 
 export default defineComponent({
   name: 'Training',
@@ -250,7 +251,7 @@ export default defineComponent({
       dbTableCountAvailable.value = null
       dbTableCountTotal.value = null
       try {
-        const resp = await fetch('http://localhost:8000/get-tables', {
+        const resp = await fetch(`${BACKEND_URL}/get-tables`, {
           headers: {
             'Authorization': `Bearer ${dbToken.value}`
           }
@@ -281,7 +282,7 @@ export default defineComponent({
     const checkTrainingStatus = async () => {
       if (!store.sessionId) return
       try {
-        const response = await fetch(`http://localhost:8000/training_status/${store.sessionId}`)
+        const response = await fetch(`${BACKEND_URL}/training_status/${store.sessionId}`)
         if (!response.ok) {
           throw new Error('Failed to fetch training status')
         }
@@ -390,8 +391,8 @@ export default defineComponent({
         }
         // Выбор эндпоинта в зависимости от чекбокса
         const endpoint = trainPredictSave.value
-          ? 'http://localhost:8000/train_prediction_save/'
-          : 'http://localhost:8000/train_tabular';
+          ? `${BACKEND_URL}/train_prediction_save/`
+          : `${BACKEND_URL}/train_tabular`;
         // --- Добавляем headers с токеном, если есть ---
         const headers: Record<string, string> = { 'Accept': 'application/json' };
         if (trainPredictSave.value && dbToken.value) {
@@ -436,7 +437,7 @@ export default defineComponent({
         // Специальный режим: только создание таблицы по первой строке
         formData.append('create_table_only', 'true');
         formData.append('db_schema', selectedDbSchema.value); // <-- исправлено
-        const resp = await fetch('http://localhost:8000/create-table-from-file', {
+        const resp = await fetch(`${BACKEND_URL}/create-table-from-file`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${dbToken.value}`
@@ -489,7 +490,7 @@ export default defineComponent({
         formData.append('primary_keys', JSON.stringify(selectedPrimaryKeys.value));
         formData.append('create_table_only', 'true');
         formData.append('db_schema', schema); // <-- исправлено
-        const resp = await fetch('http://localhost:8000/create-table-from-file', {
+        const resp = await fetch(`${BACKEND_URL}/create-table-from-file`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${dbToken.value}`
@@ -514,7 +515,7 @@ export default defineComponent({
         formData.append('file', store.selectedFile as Blob, store.selectedFile?.name ?? 'uploaded_file');
         formData.append('table_name', tableName);
         formData.append('db_schema', schema); // <-- исправлено
-        const resp = await fetch('http://localhost:8000/check-df-matches-table-schema', {
+        const resp = await fetch(`${BACKEND_URL}/check-df-matches-table-schema`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${dbToken.value}`

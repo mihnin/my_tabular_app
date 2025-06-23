@@ -16,6 +16,7 @@
 <script lang="ts">
 import { defineComponent, computed, ref } from 'vue'
 import { useMainStore } from '../stores/mainStore'
+import { BACKEND_URL } from '../apiConfig'
 
 export default defineComponent({
   name: 'Prediction',
@@ -47,7 +48,7 @@ export default defineComponent({
       isLoading.value = true;
       try {
         // Запускаем процесс прогноза через /predict (получаем 10 строк в JSON)
-        const response = await fetch(`http://localhost:8000/predict/${sessionId}`);
+        const response = await fetch(`${BACKEND_URL}/predict/${sessionId}`);
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error('Ошибка при запуске прогноза: ' + errorText);

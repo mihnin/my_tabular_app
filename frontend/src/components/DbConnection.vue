@@ -63,6 +63,7 @@ import { useMainStore } from '../stores/mainStore'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faDatabase } from '@fortawesome/free-solid-svg-icons'
+import { BACKEND_URL } from '../apiConfig'
 library.add(faDatabase)
 
 export default defineComponent({
@@ -93,7 +94,7 @@ export default defineComponent({
       if (isConnected.value && store.authToken) {
         fetchingTables.value = true;
         try {
-          const response = await fetch('http://localhost:8000/get-tables', {
+          const response = await fetch(`${BACKEND_URL}/get-tables`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -124,7 +125,7 @@ export default defineComponent({
       error.value = ''
       connecting.value = true
       try {
-        const response = await fetch('http://localhost:8000/login', {
+        const response = await fetch(`${BACKEND_URL}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: login.value, password: password.value })

@@ -123,6 +123,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import type { PropType } from 'vue'
+import { BACKEND_URL } from '../apiConfig'
 export default defineComponent({
   name: 'Instruction',
   props: {
@@ -136,9 +137,9 @@ export default defineComponent({
     downloadExample(type: 'train' | 'predict') {
       let url = ''
       if (type === 'train') {
-        url = 'http://localhost:8000/instruction/example_train.xlsx'
+        url = `${BACKEND_URL}/instruction/example_train.xlsx`
       } else {
-        url = 'http://localhost:8000/instruction/example_predict.xlsx'
+        url = `${BACKEND_URL}/instruction/example_predict.xlsx`
       }
       // Новый способ скачивания без открытия вкладки
       const link = document.createElement('a')
