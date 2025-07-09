@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 class TrainingParameters(BaseModel):
     target_column: str = Field(..., description="Название целевой колонки для прогнозирования.")
     fill_missing_method: Optional[str] = Field("None", description="Метод заполнения пропущенных значений (например, 'mean', 'median', 'None').")
-    evaluation_metric: str = Field(..., description="Метрика оценки для AutoGluon (например, 'accuracy', 'f1', 'rmse').")
+    evaluation_metric: Optional[str] = Field(None, description="Метрика оценки для AutoGluon (например, 'accuracy', 'f1', 'rmse').")
     models_to_train: Optional[Union[str, List[str], None]] = Field(None, description="Конкретные модели для обучения. Если None или пустой список, обучаются все доступные модели. Если '*', обучаются все доступные модели.")
     autogluon_preset: Optional[str] = Field("medium_quality", description="Пресет AutoGluon (например, 'medium_quality', 'high_quality', 'best_quality').")
     problem_type: Optional[str] = Field("auto", description="Тип задачи (например, 'auto', 'binary', 'multiclass', 'regression').")
