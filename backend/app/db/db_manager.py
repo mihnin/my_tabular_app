@@ -401,7 +401,6 @@ async def get_user_table_names_by_schema(username: str, password: str) -> dict:
             AND has_schema_privilege(current_user, nspname, 'USAGE');
         """
         schemas = await conn.fetch(schemas_query)
-        print(schemas)
         for row in schemas:
             schema = row['schema_name']
             tables_query = f'''

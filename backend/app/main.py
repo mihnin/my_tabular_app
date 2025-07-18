@@ -13,6 +13,8 @@ from logging.handlers import TimedRotatingFileHandler
 import os
 import asyncio
 from utils.cleanup import cleanup_old_training_sessions
+from dotenv import load_dotenv
+from pathlib import Path
 
 
 async def periodic_cleanup():
@@ -36,14 +38,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Настройка CORS для работы с Vue.js фронтендом
+# Путь к файлу .env
+ENV_PATH = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=ENV_PATH, override=True)
+
+# Получаем список origins из переменной окружения FRONTEND_URL
+frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
+frontend_urls = [url.strip() for url in frontend_urls if url.strip()]
+
+# Настройка CORS для работы с фронтендом
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vue.js dev server
-        "http://localhost:4173",  # Vue.js production preview
-        "http://localhost:3000",  # Production frontend
-    ],
+    allow_origins=frontend_urls,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
