@@ -10,7 +10,7 @@ import { CheckCircle, Database, Settings, ChevronDown, ChevronUp } from 'lucide-
 import { API_BASE_URL } from '../../apiConfig.js';
 
 export default function DbAutoSavePanel(props) {
-  const { dbConnected, setDbConnected, setAuthToken, dbTables, setDbTables, dbTablesLoading, dbError, setDbError, authToken, ensureTablesLoaded } = useData();
+  const { dbConnected, setDbConnected, setAuthToken, dbTables, setDbTables, dbTablesLoading, dbError, setDbError, authToken, ensureTablesLoaded, refreshTables } = useData();
   const [localUsername, setLocalUsername] = useState('');
   const [localPassword, setLocalPassword] = useState('');
   const [autoSaveMenuOpen, setAutoSaveMenuOpen] = useState(false); // по умолчанию скрыто

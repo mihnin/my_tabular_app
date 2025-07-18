@@ -26,7 +26,8 @@ export default function DbWork() {
     setDbTablesLoading,
     dbError,
     setDbError,
-    ensureTablesLoaded
+    ensureTablesLoaded,
+    refreshTables
   } = useData();
 
   // Локальные состояния (остается только UI/файл)
@@ -350,7 +351,8 @@ export default function DbWork() {
       if(response.ok && res.success){
         setUploadStatus('success');
         // Убираем авто-скрытие: статус сбросится, когда пользователь начнёт новую загрузку
-         
+        // После успешного создания таблицы:
+        await refreshTables();
       }else{
         setUploadStatus('error');
         setLocalTablePreviewError(res.detail || 'Ошибка загрузки');

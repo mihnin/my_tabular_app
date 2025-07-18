@@ -10,7 +10,7 @@ import { API_BASE_URL } from '../apiConfig.js'
 import * as XLSX from 'xlsx';
 
 export default function Export() {
-  const { sessionId, authToken, predictionRows, setPredictionRows, trainingStatus, setAuthToken, dbConnected, setDbConnected, dbTables, setDbTables, dbTablesLoading, setDbTablesLoading, dbError, setDbError, ensureTablesLoaded } = useData();
+  const { sessionId, authToken, predictionRows, setPredictionRows, trainingStatus, setAuthToken, dbConnected, setDbConnected, dbTables, setDbTables, dbTablesLoading, setDbTablesLoading, dbError, setDbError, ensureTablesLoaded, refreshTables } = useData();
   const [localUsername, setLocalUsername] = useState('');
   const [localPassword, setLocalPassword] = useState('');
   
@@ -212,6 +212,8 @@ export default function Export() {
         if (result.success) {
           setDbSaveSuccess(true);
           setDbPanelOpen(false);
+          // После успешного создания таблицы:
+          await refreshTables();
         } else {
           setDbSaveError(result.detail || 'Ошибка при сохранении в БД.');
         }

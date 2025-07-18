@@ -125,6 +125,30 @@ export function DataProvider({ children }) {
     }
   }, [authToken, dbConnected, dbTablesLoading, dbTables.length]);
 
+  const refreshTables = useCallback(async () => {
+    if (!authToken || !dbConnected) return;
+    setDbTablesLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/get-tables`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setDbTables(Object.keys(result.tables).map(schema => ({ schema, tables: result.tables[schema] })));
+      } else {
+        setDbError('Ошибка загрузки таблиц: ' + (result.message || 'Неизвестная ошибка'));
+      }
+    } catch (e) {
+      setDbError('Ошибка загрузки таблиц: ' + (e.message || e));
+    } finally {
+      setDbTablesLoading(false);
+    }
+  }, [authToken, dbConnected]);
+
   // --- NEW METHODS FOR TABULAR ---
   const updateTrainData = (data, source, fileOrTable = null) => {
     setTrainData(data)
@@ -269,7 +293,8 @@ export function DataProvider({ children }) {
       selectedPrimaryKeys,
       setSelectedPrimaryKeys,
       clearDbState,
-      ensureTablesLoaded
+      ensureTablesLoaded,
+      refreshTables
     }}>
       {children}
     </DataContext.Provider>
