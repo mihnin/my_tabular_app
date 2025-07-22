@@ -86,7 +86,7 @@ function Navigation() {
     { path: '/training', icon: Play, label: 'Обучение', description: 'Запуск и мониторинг', requiresFile: true, requiresTraining: false },
     { path: '/analysis', icon: BarChart3, label: 'Анализ данных', description: 'Статистика и визуализация', requiresFile: true, requiresTraining: false },
     { path: '/export', icon: Download, label: 'Экспорт', description: 'Сохранение результатов', requiresFile: false, requiresTraining: true },
-    { path: '/dbwork', icon: Database, label: 'Работа с БД', description: 'Загрузка/выгрузка данных из БД', requiresFile: false, requiresTraining: false }
+    { path: '/dbwork', icon: Database, label: 'Работа с БД', description: 'Загрузка и выгрузка таблиц', requiresFile: false, requiresTraining: false }
   ]
 
   return (

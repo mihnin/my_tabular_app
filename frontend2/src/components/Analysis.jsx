@@ -7,9 +7,12 @@ import { BarChart3, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button.jsx'
 import { API_BASE_URL } from '../apiConfig.js'
 
+// --- PROMISE CACHE НА УРОВНЕ МОДУЛЯ ---
+const globalAnalysisPromiseCache = {};
+
 export default function Analysis() {
   const navigate = useNavigate();
-  const { trainFile, predictFile, predictionProcessed, analysisCache, setAnalysisCache } = useData();
+  const { trainFile, predictFile, predictionProcessed, analysisCache, setAnalysisCache, sessionId } = useData();
   const [trainResult, setTrainResult] = useState(null);
   const [predictResult, setPredictResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -17,11 +20,40 @@ export default function Analysis() {
   const [activeTab, setActiveTab] = useState('train');
 
   // Ключи для кэша
-  const { sessionId } = useData(); // глобальный sessionId из DataContext
   const trainCacheKey = sessionId ? `train_session_${sessionId}` : (trainFile ? `train_file_${trainFile.name}_${trainFile.size}` : null);
   const predictCacheKey = sessionId ? `predict_session_${sessionId}` : (predictFile ? `predict_file_${predictFile.name}_${predictFile.size}` : null);
 
   useEffect(() => {
+    let needLoad = false;
+    if (trainCacheKey && analysisCache[trainCacheKey]) {
+      setTrainResult(analysisCache[trainCacheKey]);
+    } else if (trainCacheKey) {
+      needLoad = true;
+    }
+    if (predictCacheKey && analysisCache[predictCacheKey]) {
+      setPredictResult(analysisCache[predictCacheKey]);
+    } else if (predictCacheKey) {
+      needLoad = true;
+    }
+    if (!needLoad) return;
+
+    // --- PROMISE CACHE LOGIC ---
+    const promiseKey = `${trainCacheKey || ''}|${predictCacheKey || ''}`;
+    if (globalAnalysisPromiseCache[promiseKey]) {
+      setLoading(true);
+      globalAnalysisPromiseCache[promiseKey]
+        .then(({ train, predict }) => {
+          setTrainResult(train);
+          setPredictResult(predict);
+          setError('');
+          setLoading(false);
+        })
+        .catch(e => {
+          setError(e.message || 'Ошибка анализа файла');
+          setLoading(false);
+        });
+      return;
+    }
     async function loadData() {
       setLoading(true);
       setError('');
@@ -38,32 +70,25 @@ export default function Analysis() {
         const result = await res.json();
         setTrainResult(result.train);
         setPredictResult(result.predict);
-        // Кэшируем
         setAnalysisCache(prev => ({
           ...prev,
           ...(result.train ? { [trainCacheKey]: result.train } : {}),
           ...(result.predict ? { [predictCacheKey]: result.predict } : {})
         }));
+        return { train: result.train, predict: result.predict };
       } catch (e) {
         setError(e.message || 'Ошибка анализа файла');
+        throw e;
       } finally {
         setLoading(false);
       }
     }
-    // Проверяем кэш
-    let needLoad = false;
-    if (trainCacheKey && analysisCache[trainCacheKey]) {
-      setTrainResult(analysisCache[trainCacheKey]);
-    } else if (trainCacheKey) {
-      needLoad = true;
-    }
-    if (predictCacheKey && analysisCache[predictCacheKey]) {
-      setPredictResult(analysisCache[predictCacheKey]);
-    } else if (predictCacheKey) {
-      needLoad = true;
-    }
-    if (needLoad) loadData();
-    // eslint-disable-next-line
+    const promise = loadData();
+    globalAnalysisPromiseCache[promiseKey] = promise;
+    promise.finally(() => {
+      delete globalAnalysisPromiseCache[promiseKey];
+    });
+  // eslint-disable-next-line
   }, [trainFile, predictFile, sessionId]);
 
   // Сброс кэша при загрузке новых файлов

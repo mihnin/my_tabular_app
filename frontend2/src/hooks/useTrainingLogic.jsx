@@ -38,8 +38,8 @@ export function useTrainingLogic({
   const [currentModel, setCurrentModel] = useState('');
   const [elapsedTime, setElapsedTime] = useState(0);
   const {
-    setPredictionRows, predictionProcessed, setPredictionProcessed, trainingStartTime, setTrainingStartTime, setSessionId,
-    trainFile, predictFile
+    setPredictionRows, predictionRows, predictionProcessed, setPredictionProcessed, trainingStartTime, setTrainingStartTime, setSessionId,
+    trainFile, predictFile, trainPreviewData
   } = useData();
   const pollingRef = useRef(null);
   const tablesLoadedRef = useRef(false);
@@ -526,51 +526,23 @@ export function useTrainingLogic({
     }
   };
 
-  // --- Populate fileColumns from trainFile ---
+  // --- Populate fileColumns from predictionRows ---
   useEffect(() => {
-    async function extractColumnsFromTrainFile(file) {
-      if (!file) {
-        setFileColumns([]);
-        setSelectedPrimaryKeys([]);
-        return;
-      }
-      try {
-        // Only handle Excel files (.xlsx, .xls)
-        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-          const arrayBuffer = await file.arrayBuffer();
-          const XLSX = await import('xlsx');
-          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-          if (rows.length > 0) {
-            const headers = rows[0];
-            // Фильтруем технические колонки 0.1-0.9
-            const filteredHeaders = headers.filter(h => !/^0\.[1-9]$/.test(h));
-            setFileColumns(filteredHeaders);
-            setSelectedPrimaryKeys([]);
-          } else {
-            setFileColumns([]);
-            setSelectedPrimaryKeys([]);
-          }
-        } else if (file.name.endsWith('.csv')) {
-          // CSV: read first line for headers
-          const text = await file.text();
-          const firstLine = text.split(/\r?\n/)[0];
-          const headers = firstLine.split(',').map(h => h.trim());
-          const filteredHeaders = headers.filter(h => !/^0\.[1-9]$/.test(h));
-          setFileColumns(filteredHeaders);
-          setSelectedPrimaryKeys([]);
-        } else {
-          setFileColumns([]);
-          setSelectedPrimaryKeys([]);
-        }
-      } catch (e) {
-        setFileColumns([]);
-        setSelectedPrimaryKeys([]);
+    let headers = [];
+    if (trainPreviewData && Array.isArray(trainPreviewData.columns) && trainPreviewData.columns.length > 0) {
+      headers = trainPreviewData.columns;
+    } else if (Array.isArray(predictionRows) && predictionRows.length > 0) {
+      if (typeof predictionRows[0] === 'object' && !Array.isArray(predictionRows[0])) {
+        headers = Object.keys(predictionRows[0] || {});
+      } else if (Array.isArray(predictionRows[0])) {
+        headers = predictionRows[0].map(h => String(h));
       }
     }
-    extractColumnsFromTrainFile(trainFile);
-  }, [trainFile, setSelectedPrimaryKeys]);
+    // Фильтруем технические колонки 0.1-0.9
+    const filteredHeaders = headers.filter(h => !/^0\.[1-9]$/.test(h));
+    setFileColumns(filteredHeaders);
+    setSelectedPrimaryKeys([]);
+  }, [trainPreviewData, predictionRows, setSelectedPrimaryKeys]);
 
   // Сброс selectedPrimaryKeys при отключении от БД
   useEffect(() => {

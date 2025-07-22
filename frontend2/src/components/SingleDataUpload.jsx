@@ -43,7 +43,9 @@ export default function SingleDataUpload({
   const [fileError, setFileError] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [configLoading, setConfigLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const previewRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // --- DB connection/auth state ---
   const [localUsername, setLocalUsername] = useState('');
@@ -81,9 +83,11 @@ export default function SingleDataUpload({
     const file = event.target.files[0];
     if (!file) return;
     setFileError('');
-    // Не сбрасываем uploadedFile и previewData!
-    setTablePreview(null);
-    setTablePreviewError('');
+    setShowSuccess(false); // Сбросить сразу при старте
+    setUploadedFile(null); // Сбросить файл перед загрузкой
+    setPreviewData(null); // Сбросить предпросмотр перед загрузкой
+    setTablePreview && setTablePreview(null);
+    setTablePreviewError && setTablePreviewError('');
     setSelectedDbTable && setSelectedDbTable('');
     try {
       if (!validateFileSize(file, 100)) {
@@ -104,12 +108,13 @@ export default function SingleDataUpload({
         totalRows: parsedData.totalRows, // <-- используем именно totalRows с сервера
         fullData: parsedData
       });
-      // Всегда передаем файл как третий аргумент
+      setShowSuccess(true); // Показываем сообщение сразу после успешного парсинга
       updateData && updateData(parsedData, 'file', file);
     } catch (error) {
       setFileError(error.message || 'Произошла ошибка при обработке файла');
       setUploadedFile(null);
       setPreviewData(null);
+      setShowSuccess(false);
     } finally {
       setFileLoading(false);
     }
@@ -123,8 +128,7 @@ export default function SingleDataUpload({
     setTablePreview && setTablePreview(null);
     setTablePreviewError && setTablePreviewError('');
     setSelectedDbTable && setSelectedDbTable('');
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) fileInput.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Drag & Drop
@@ -396,6 +400,7 @@ export default function SingleDataUpload({
                   onChange={handleFileUpload}
                   disabled={fileLoading}
                   className="mt-4 max-w-xs mx-auto"
+                  ref={fileInputRef}
                 />
                 {fileLoading && (
                   <div className="mt-4 flex items-center justify-center space-x-2">
@@ -404,7 +409,7 @@ export default function SingleDataUpload({
                   </div>
                 )}
               </div>
-              {uploadedFile && !fileError && (
+              {uploadedFile && !fileError && showSuccess && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
