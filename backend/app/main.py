@@ -5,6 +5,7 @@ from prediction.router import router as prediction_router
 from db.router import router as db_router
 from train_prediciton_save.router import router as train_prediction_save_router
 from train_predict_for_n8n.router import router as train_predict_n8n_router
+from excel_parsing.router import router as parse_excel_router 
 from logs.router import router as logs_router
 from instruction.router import router as instruction_router
 from contextlib import asynccontextmanager
@@ -82,3 +83,4 @@ app.include_router(prediction_router)
 app.include_router(db_router)
 app.include_router(logs_router)
 app.include_router(instruction_router)
+app.include_router(parse_excel_router)

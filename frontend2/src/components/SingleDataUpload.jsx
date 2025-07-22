@@ -101,7 +101,7 @@ export default function SingleDataUpload({
       setPreviewData({
         columns: parsedData.columns,
         rows: previewRows,
-        totalRows: parsedData.rows.length,
+        totalRows: parsedData.totalRows, // <-- используем именно totalRows с сервера
         fullData: parsedData
       });
       // Всегда передаем файл как третий аргумент
@@ -310,7 +310,7 @@ export default function SingleDataUpload({
         setTrainPreviewData({
           columns: parsedData.columns,
           rows: previewRows,
-          totalRows: parsedData.rows.length,
+          totalRows: parsedData.totalRows, // <-- исправлено: используем totalRows с бэкенда
           fullData: parsedData
         });
         setTrainData(parsedData);
@@ -319,7 +319,7 @@ export default function SingleDataUpload({
         setPredictPreviewData({
           columns: parsedData.columns,
           rows: previewRows,
-          totalRows: parsedData.rows.length,
+          totalRows: parsedData.totalRows, // <-- исправлено: используем totalRows с бэкенда
           fullData: parsedData
         });
         setPredictData(parsedData);
@@ -462,7 +462,9 @@ export default function SingleDataUpload({
                   </table>
                 </div>
                 <div className="mt-4 flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">Показано {previewData.rows.length} из {previewData.totalRows || previewData.rows.length} строк</p>
+                  <p className="text-sm text-muted-foreground">
+                    Показано {previewData.rows.length} из {previewData.totalRows} строк
+                  </p>
                 </div>
               </CardContent>
             </Card>

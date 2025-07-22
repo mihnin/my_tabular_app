@@ -143,6 +143,42 @@ export default function Training() {
           formatCellValue={(key, value) => value == null ? '' : value}
         />
         <PredictionPreview predictionRows={predictionRows} />
+        {/* Значимость признаков */}
+        {globalTrainingStatus?.feature_importance && Array.isArray(globalTrainingStatus.feature_importance) && globalTrainingStatus.feature_importance.length > 0 && (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="text-primary" size={20} />
+                  <span>Значимость признаков</span>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                Вклад каждого признака в итоговую модель (чем выше, тем важнее)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 font-medium">Признак</th>
+                      <th className="text-left p-3 font-medium">Значимость</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {globalTrainingStatus.feature_importance.map((f, idx) => (
+                      <tr key={idx} className="border-b hover:bg-muted/50">
+                        <td className="p-3">{f.feature}</td>
+                        <td className="p-3">{f.importance?.toFixed ? f.importance.toFixed(4) : f.importance}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <ModelMetricsCards
           bestModel={getBestModel()}
           bestModelMetric={getBestModelMetric()}

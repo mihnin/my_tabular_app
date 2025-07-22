@@ -51,6 +51,8 @@ export function DataProvider({ children }) {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   // --- PRIMARY KEYS GLOBAL STATE ---
   const [selectedPrimaryKeys, setSelectedPrimaryKeys] = useState([]);
+  // --- ANALYSIS CACHE (for tabular analysis) ---
+  const [analysisCache, setAnalysisCache] = useState({});
 
   const tablesLoadedRef = useRef(false);
 
@@ -294,7 +296,9 @@ export function DataProvider({ children }) {
       setSelectedPrimaryKeys,
       clearDbState,
       ensureTablesLoaded,
-      refreshTables
+      refreshTables,
+      analysisCache,
+      setAnalysisCache
     }}>
       {children}
     </DataContext.Provider>

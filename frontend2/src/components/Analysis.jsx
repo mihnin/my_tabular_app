@@ -1,67 +1,79 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../contexts/DataContext'
-import { parseFile } from '../utils/fileParser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { BarChart3, AlertTriangle, PieChart } from 'lucide-react'
+import { BarChart3, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button.jsx'
+import { API_BASE_URL } from '../apiConfig.js'
 
 export default function Analysis() {
   const navigate = useNavigate();
-  const { trainFile, predictFile, trainData, predictData, predictionProcessed } = useData();
-  const [columns, setColumns] = useState([]);
-  const [rows, setRows] = useState([]);
+  const { trainFile, predictFile, predictionProcessed, analysisCache, setAnalysisCache } = useData();
+  const [trainResult, setTrainResult] = useState(null);
+  const [predictResult, setPredictResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [missingStats, setMissingStats] = useState({ total: 0, missing: 0, percent: 0 });
-  const [missingByColumn, setMissingByColumn] = useState([]);
   const [activeTab, setActiveTab] = useState('train');
+
+  // Ключи для кэша
+  const { sessionId } = useData(); // глобальный sessionId из DataContext
+  const trainCacheKey = sessionId ? `train_session_${sessionId}` : (trainFile ? `train_file_${trainFile.name}_${trainFile.size}` : null);
+  const predictCacheKey = sessionId ? `predict_session_${sessionId}` : (predictFile ? `predict_file_${predictFile.name}_${predictFile.size}` : null);
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       setError('');
-      let data = null;
-      if (activeTab === 'train') {
-        data = trainData;
-        if (!data && trainFile) {
-          data = await parseFile(trainFile);
-        }
-      } else {
-        data = predictData;
-        if (!data && predictFile) {
-          data = await parseFile(predictFile);
-        }
-      }
-      if (!data || !data.rows || !data.columns) {
-        setError('Нет данных для анализа');
+      try {
+        const formData = new FormData();
+        if (trainFile) formData.append('train_file', trainFile);
+        if (predictFile) formData.append('predict_file', predictFile);
+        if (sessionId) formData.append('session_id', sessionId);
+        const res = await fetch(`${API_BASE_URL}/analyze-tabular`, {
+          method: 'POST',
+          body: formData
+        });
+        if (!res.ok) throw new Error((await res.json()).detail || 'Ошибка анализа');
+        const result = await res.json();
+        setTrainResult(result.train);
+        setPredictResult(result.predict);
+        // Кэшируем
+        setAnalysisCache(prev => ({
+          ...prev,
+          ...(result.train ? { [trainCacheKey]: result.train } : {}),
+          ...(result.predict ? { [predictCacheKey]: result.predict } : {})
+        }));
+      } catch (e) {
+        setError(e.message || 'Ошибка анализа файла');
+      } finally {
         setLoading(false);
-        return;
       }
-      setColumns(data.columns);
-      setRows(data.rows);
-      // Анализ пропусков по столбцам
-      const missingByCol = data.columns.map((col, idx) => {
-        let missing = 0;
-        for (let row of data.rows) {
-          if (row[idx] === '' || row[idx] === null || row[idx] === undefined) missing++;
-        }
-        return { column: col, missing };
-      });
-      setMissingByColumn(missingByCol);
-      // Общая статистика
-      let totalCells = data.rows.length * data.columns.length;
-      let missingCells = missingByCol.reduce((sum, col) => sum + col.missing, 0);
-      setMissingStats({
-        total: data.rows.length,
-        missing: missingCells,
-        percent: totalCells ? (missingCells / totalCells) * 100 : 0
-      });
-      setLoading(false);
     }
-    loadData();
-  }, [trainFile, predictFile, trainData, predictData, activeTab]);
+    // Проверяем кэш
+    let needLoad = false;
+    if (trainCacheKey && analysisCache[trainCacheKey]) {
+      setTrainResult(analysisCache[trainCacheKey]);
+    } else if (trainCacheKey) {
+      needLoad = true;
+    }
+    if (predictCacheKey && analysisCache[predictCacheKey]) {
+      setPredictResult(analysisCache[predictCacheKey]);
+    } else if (predictCacheKey) {
+      needLoad = true;
+    }
+    if (needLoad) loadData();
+    // eslint-disable-next-line
+  }, [trainFile, predictFile, sessionId]);
+
+  // Сброс кэша при загрузке новых файлов
+  useEffect(() => {
+    if (!trainFile && !sessionId && !predictFile) {
+      setAnalysisCache({});
+    }
+  }, [trainFile, sessionId, predictFile]);
+
+  const current = activeTab === 'train' ? trainResult : predictResult;
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -75,57 +87,50 @@ export default function Analysis() {
       </div>
       {loading ? <div>Загрузка...</div> : error ? <div className="text-red-500">{error}</div> : (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="text-primary" size={20} />
-                  <span>Всего записей</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-primary">{missingStats.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <AlertTriangle className="text-orange-500" size={20} />
-                  <span>Всего пропусков</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{missingStats.missing}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <PieChart className="text-blue-400" size={20} />
-                  <span>Процент пропусков</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{missingStats.percent.toFixed(2)}%</div>
-              </CardContent>
-            </Card>
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Пропуски по столбцам</CardTitle>
-            </CardHeader>
-            <CardContent style={{ height: 320 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={missingByColumn}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="column" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="missing" fill="#f59e42" name="Пропуски" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {current ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <BarChart3 className="text-primary" size={20} />
+                      <span>Всего записей</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-primary">{current.total}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <AlertTriangle className="text-orange-500" size={20} />
+                      <span>Всего пропусков</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-600">{current.missing_by_column ? current.missing_by_column.reduce((sum, col) => sum + col.missing, 0) : 0}</div>
+                  </CardContent>
+                </Card>
+              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Пропуски по столбцам</CardTitle>
+                </CardHeader>
+                <CardContent style={{ height: 320 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={current.missing_by_column || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="column" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="missing" fill="#f59e42" name="Пропуски" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </>
+          ) : <div>Нет данных для анализа</div>}
           <div className="flex justify-between items-center mt-8">
             <Button
               variant="outline"

@@ -251,6 +251,7 @@ def prepare_training_data_and_status(
     else:
         raise HTTPException(status_code=400, detail="train_file is required")
     # Сохраняем test файл (если есть)
+    test_path = None
     if test_file is not None:
         test_path = os.path.join(session_path, f"test_{test_file.filename}")
         test_bytes = test_file.file.read() if hasattr(test_file, 'file') else test_file.read()
@@ -265,6 +266,15 @@ def prepare_training_data_and_status(
         else:
             raise ValueError("Файл должен быть .csv или .xlsx/.xls")
     df_train = read_df(train_path)
+    # Сохраняем train.parquet
+    train_parquet_path = os.path.join(session_path, "train.parquet")
+    df_train.to_parquet(train_parquet_path, index=False)
+    # Если есть test, читаем и сохраняем prediction.parquet
+    df_test = None
+    if test_path is not None:
+        df_test = read_df(test_path)
+        prediction_parquet_path = os.path.join(session_path, "prediction.parquet")
+        df_test.to_parquet(prediction_parquet_path, index=False)
     # Проверяем наличие целевой переменной
     if not training_params.target_column:
         raise HTTPException(status_code=400, detail="target_column must be specified in params")
