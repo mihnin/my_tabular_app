@@ -35,7 +35,8 @@ export default function Export() {
 
   const exportFormats = [
     { value: 'excel', label: 'Excel (.xlsx)', icon: Download, description: 'Многолистовой Excel файл с данными' },
-    { value: 'csv', label: 'CSV (.csv)', icon: Download, description: 'Простой CSV файл для импорта в другие системы' }
+    { value: 'csv', label: 'CSV (.csv)', icon: Download, description: 'Простой CSV файл для импорта в другие системы' },
+    { value: 'zip', label: 'ZIP архив сессии', icon: Download, description: 'Весь архив сессии (все файлы, включая prediction, leaderboard и др.)' }
   ]
 
   const handleConfigChange = (field, value) => {
@@ -66,6 +67,9 @@ export default function Export() {
       } else if (exportConfig.format === 'csv') {
         url = `${API_BASE_URL}/download_prediction_csv/${sessionId}`
         filename = `prediction_${sessionId}.csv`
+      } else if (exportConfig.format === 'zip') {
+        url = `${API_BASE_URL}/download_session_zip/${sessionId}`
+        filename = `session_${sessionId}.zip`
       }
       
       const response = await fetch(url)

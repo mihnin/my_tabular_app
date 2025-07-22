@@ -11,6 +11,7 @@ from sessions.utils import (
     get_session_path,
     load_session_metadata,
 )
+from zipfile import ZipFile
 
 router = APIRouter()
 
@@ -247,3 +248,44 @@ def predict_head_endpoint(session_id: str):
         return {"prediction_head": head}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка чтения файла прогноза: {e}")
+
+@router.get("/download_session_zip/{session_id}")
+def download_session_zip(session_id: str):
+    """Скачать zip-архив всей папки сессии по session_id."""
+    session_path = get_session_path(session_id)
+    if not os.path.exists(session_path):
+        raise HTTPException(status_code=404, detail="Папка сессии не найдена")
+    try:
+        zip_buffer = BytesIO()
+        with ZipFile(zip_buffer, "w") as zip_file:
+            # Добавляем все файлы из папки сессии, кроме parquet
+            for root, dirs, files in os.walk(session_path):
+                for file in files:
+                    if file.endswith('.parquet'):
+                        continue
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, session_path)
+                    zip_file.write(file_path, arcname)
+            # Добавляем prediction_{session_id}.xlsx, если есть parquet
+            parquet_path = os.path.join(session_path, f"prediction_{session_id}.parquet")
+            if os.path.exists(parquet_path):
+                try:
+                    df = pd.read_parquet(parquet_path)
+                    xlsx_bytes = BytesIO()
+                    with pd.ExcelWriter(xlsx_bytes, engine="xlsxwriter") as writer:
+                        df.to_excel(writer, index=False)
+                    xlsx_bytes.seek(0)
+                    zip_file.writestr(f"prediction_{session_id}.xlsx", xlsx_bytes.read())
+                except Exception as e:
+                    logging.warning(f"Не удалось добавить xlsx в архив: {e}")
+        zip_buffer.seek(0)
+    except Exception as e:
+        logging.error(f"Ошибка при создании zip-архива: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при создании zip-архива: {e}")
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename=session_{session_id}.zip"
+        }
+    )

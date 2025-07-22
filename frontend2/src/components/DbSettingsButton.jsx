@@ -20,6 +20,7 @@ export default function DbSettingsButton() {
     DB_SCHEMA: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   // Открыть модалку для ввода ключа
@@ -168,7 +169,45 @@ export default function DbSettingsButton() {
               </div>
             </div>
             {errorMessage && <div className="text-red-600 text-sm mt-2">{errorMessage}</div>}
-            <Button className="w-full mt-4" onClick={updateEnvVariables} disabled={isLoading}>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={async () => {
+                setIsLogsLoading(true);
+                setErrorMessage("");
+                try {
+                  const response = await fetch(`${API_BASE_URL}/logs/download`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ secret_key: secretKey })
+                  });
+                  if (!response.ok) {
+                    throw new Error('Ошибка скачивания логов');
+                  }
+                  const blob = await response.blob();
+                  const contentDisposition = response.headers.get('Content-Disposition');
+                  let filename = 'app_logs.log';
+                  if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="?([^";]+)"?/);
+                    if (match) filename = match[1];
+                  }
+                  const link = document.createElement('a');
+                  link.href = window.URL.createObjectURL(blob);
+                  link.download = filename;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } catch (e) {
+                  setErrorMessage('Ошибка при скачивании логов');
+                } finally {
+                  setIsLogsLoading(false);
+                }
+              }}
+              disabled={isLogsLoading || !secretKey}
+            >
+              {isLogsLoading ? 'Скачивание...' : 'Скачать логи'}
+            </Button>
+            <Button className="w-full mt-2" onClick={updateEnvVariables} disabled={isLoading}>
               {isLoading ? 'Сохранение...' : 'Сохранить настройки'}
             </Button>
           </div>
@@ -187,4 +226,4 @@ export default function DbSettingsButton() {
       )}
     </>
   );
-} 
+}
