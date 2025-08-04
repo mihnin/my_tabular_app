@@ -1,4 +1,5 @@
 import os
+import logging
 
 import pandas as pd
 from sessions.utils import get_session_path
@@ -17,14 +18,13 @@ class AutoMLManager:
                 df["strategy"] = strategy
                 dfs.append(df[["model", "score_val", "strategy"]])
             else:
-                print(f"Файл не найден: {file_path}")
+                pass
 
         if dfs:
             combined_df = pd.concat(dfs, ignore_index=True)
             combined_df = combined_df.sort_values(by="score_val", ascending=False)
             return combined_df
         else:
-            print("Нет данных для объединения")
             return pd.DataFrame(columns=["model", "score_val", "strategy"])
         
     def get_best_strategy(self, session_id):
