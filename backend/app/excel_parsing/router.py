@@ -8,6 +8,7 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from fastapi import Request
+from io import BytesIO
 
 router = APIRouter()
 
@@ -19,15 +20,14 @@ async def preview_excel(file: UploadFile = File(...)):
         if filename.endswith('.csv'):
             df = pd.read_csv(file.file, nrows=10)
             file.file.seek(0)
-            # Для csv считаем строки вручную
-            total_rows = sum(1 for _ in file.file) - 1  # минус строка заголовков
+            total_rows = sum(1 for _ in file.file) - 1
         else:
-            df = pd.read_excel(file.file, nrows=10)
-            file.file.seek(0)
+            file_bytes = file.file.read()
+            df = pd.read_excel(BytesIO(file_bytes), nrows=10)
             from openpyxl import load_workbook
-            wb = load_workbook(file.file, read_only=True)
+            wb = load_workbook(BytesIO(file_bytes), read_only=True)
             ws = wb.active
-            total_rows = ws.max_row - 1  # минус строка заголовков
+            total_rows = ws.max_row - 1
             wb.close()
         df = df.astype(str)
         data = df.to_dict(orient="records")
@@ -84,7 +84,8 @@ async def analyze_tabular(
                 if filename.endswith('.csv'):
                     return pd.read_csv(file.file)
                 else:
-                    return pd.read_excel(file.file)
+                    file_bytes = file.file.read()
+                    return pd.read_excel(BytesIO(file_bytes))
             else:
                 return None
 
