@@ -9,6 +9,10 @@ import uuid
 import logging
 from typing import Optional, List, Dict
 
+# Импорты для работы с MinIO
+from minio import Minio
+from minio.error import S3Error
+
 from training.model import TrainingParameters
 from train_prediciton_save.router import run_training_prediction_async
 from sessions.utils import (
@@ -19,17 +23,88 @@ from sessions.utils import (
 
 router = APIRouter()
 
+# --- Вспомогательные функции для работы с MinIO ---
+
+def get_minio_client() -> Minio:
+    """Создает и возвращает клиент MinIO на основе переменных окружения."""
+    try:
+        minio_endpoint = os.getenv('MINIO_ENDPOINT', 'localhost:9000')
+        minio_access_key = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
+        minio_secret_key = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
+        minio_secure = os.getenv('MINIO_SECURE', '0') == '1'
+        return Minio(
+            minio_endpoint,
+            access_key=minio_access_key,
+            secret_key=minio_secret_key,
+            secure=minio_secure
+        )
+    except Exception as e:
+        logging.error(f"Ошибка при создании клиента MinIO: {e}")
+        raise HTTPException(status_code=500, detail="Не удалось настроить подключение к MinIO.")
+
+def get_file_from_minio(minio_file_id: str) -> bytes:
+    """
+    Скачивает файл из MinIO по его ID.
+    Формат ID: <bucket_name>/<object_name>
+    """
+    if '/' not in minio_file_id:
+        raise HTTPException(status_code=400, detail='minio_file_id должен быть в формате <bucket>/<object>')
+    
+    bucket_name, object_name = minio_file_id.split('/', 1)
+    client = get_minio_client()
+    
+    try:
+        response = client.get_object(bucket_name, object_name)
+        data = response.read()
+        return data
+    except S3Error as e:
+        logging.error(f"Ошибка получения файла из MinIO '{minio_file_id}': {e}")
+        raise HTTPException(status_code=404, detail=f"Ошибка получения файла из MinIO: {e}")
+    finally:
+        if 'response' in locals() and response:
+            response.close()
+            response.release_conn()
+
+def upload_file_to_minio(file_bytes: bytes, bucket: str, object_name: str, content_type: str):
+    """Загружает байты файла в MinIO."""
+    client = get_minio_client()
+    try:
+        # Проверяем, существует ли бакет, и создаем, если нет
+        found = client.bucket_exists(bucket)
+        if not found:
+            client.make_bucket(bucket)
+            logging.info(f"Создан бакет: '{bucket}'")
+
+        client.put_object(
+            bucket,
+            object_name,
+            io.BytesIO(file_bytes),
+            length=len(file_bytes),
+            content_type=content_type
+        )
+        logging.info(f"Файл успешно загружен в MinIO: '{bucket}/{object_name}'")
+    except S3Error as e:
+        logging.error(f"Ошибка загрузки файла в MinIO '{bucket}/{object_name}': {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка загрузки файла в MinIO: {e}")
+
+# --- Обновленные Pydantic модели ---
+
 class TrainPredictRequest(BaseModel):
-    train_file_base64: str
-    predict_file_base64: str
+    train_minio_file_id: str  # ID файла для обучения в MinIO
+    predict_minio_file_id: str # ID файла для прогноза в MinIO
     target_column: Optional[str] = None
     training_time_limit: Optional[int] = None
     problem_type: Optional[str] = None
     evaluation_metric: Optional[str] = None
     training_params: Optional[TrainingParameters] = None
 
+class FileResponse(BaseModel):
+    fileId: str
+    fileName: str
+    mimeType: str
+
 class TrainPredictResponse(BaseModel):
-    files: List[Dict[str, str]]
+    files: List[FileResponse]
     session_id: str
 
 def get_default_training_params() -> TrainingParameters:
@@ -47,22 +122,22 @@ def get_default_training_params() -> TrainingParameters:
 @router.post("/train_predict_base64/", response_model=TrainPredictResponse)
 async def train_predict_base64(request: TrainPredictRequest):
     """
-    Эндпоинт для обучения модели и прогноза по Excel файлам в формате base64.
+    Эндпоинт для обучения модели и прогноза по Excel файлам из MinIO.
     
-    1. Получает файлы в base64
-    2. Запускает обучение
-    3. Делает прогноз
-    4. Возвращает файл с прогнозом в base64
+    1. Получает ID файлов для обучения и прогноза из MinIO.
+    2. Скачивает файлы.
+    3. Запускает обучение и делает прогноз.
+    4. Формирует итоговый Excel-файл с прогнозом и мета-информацией.
+    5. Загружает результат обратно в MinIO.
+    6. Возвращает информацию о загруженном файле.
     """
     session_id = str(uuid.uuid4())
     
     try:
         logging.info(f"[train_predict_base64] Начало обработки для session_id={session_id}")
         
-        # Используем параметры по умолчанию, если не переданы
         training_params = get_default_training_params()
 
-        # Переопределяем параметры из запроса, если они переданы
         if request.target_column:
             training_params.target_column = request.target_column
         if request.training_time_limit is not None:
@@ -72,14 +147,18 @@ async def train_predict_base64(request: TrainPredictRequest):
         if request.evaluation_metric:
             training_params.evaluation_metric = request.evaluation_metric
         
-        # Декодируем base64 файлы
+        # Скачиваем файлы из MinIO вместо декодирования base64
         try:
-            train_file_bytes = base64.b64decode(request.train_file_base64)
-            predict_file_bytes = base64.b64decode(request.predict_file_base64)
+            logging.info(f"Скачивание файла для обучения: {request.train_minio_file_id}")
+            train_file_bytes = get_file_from_minio(request.train_minio_file_id)
+            logging.info(f"Скачивание файла для прогноза: {request.predict_minio_file_id}")
+            predict_file_bytes = get_file_from_minio(request.predict_minio_file_id)
+        except HTTPException as e:
+            # Перебрасываем ошибку, чтобы FastAPI вернул правильный статус
+            raise e
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Ошибка декодирования base64: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Ошибка получения файлов из MinIO: {str(e)}")
         
-        # Загружаем данные для обучения
         try:
             df_train = pd.read_excel(io.BytesIO(train_file_bytes))
             df_predict = pd.read_excel(io.BytesIO(predict_file_bytes))
@@ -88,14 +167,11 @@ async def train_predict_base64(request: TrainPredictRequest):
         
         logging.info(f"[train_predict_base64] Файлы загружены. Train shape: {df_train.shape}, Predict shape: {df_predict.shape}")
         
-        # Создаем сессию
         session_path = create_session_directory(session_id)
         
-        # Сохраняем файл для прогноза в сессии (используем префикс test_ для совместимости)
         predict_file_path = os.path.join(session_path, f"test_{session_id}.xlsx")
         df_predict.to_excel(predict_file_path, index=False)
         
-        # Инициализируем статус сессии
         training_sessions[session_id] = {
             "status": "initializing",
             "session_id": session_id,
@@ -103,43 +179,56 @@ async def train_predict_base64(request: TrainPredictRequest):
             "predict_file_path": predict_file_path
         }
         
-        # Запускаем обучение и прогноз синхронно (без background task)
         await run_training_prediction_async(
             session_id=session_id,
             df_train=df_train,
             training_params=training_params,
             original_filename="train_file.xlsx",
-            token=None  # Для этого эндпоинта не требуется токен
+            token=None
         )
         
-        # Проверяем статус выполнения
         session_status = training_sessions.get(session_id, {})
         if session_status.get("status") != "completed":
             error_msg = session_status.get("error", "Неизвестная ошибка обучения")
             raise HTTPException(status_code=500, detail=f"Ошибка обучения: {error_msg}")
         
-        # Получаем файл с прогнозом
         prediction_file_path = session_status.get("prediction_file")
         if not prediction_file_path or not os.path.exists(prediction_file_path):
             raise HTTPException(status_code=500, detail="Файл с прогнозом не найден")
         
-        # Загружаем прогноз
         prediction_df = pd.read_parquet(prediction_file_path)
         
-        # Создаём Excel с метаинформацией (аналогично prediction/router.py)
+        # Создаём Excel с метаинформацией
         output_buffer = create_excel_with_metadata(prediction_df, session_id)
         
-        # Кодируем в base64
-        output_buffer.seek(0)
-        prediction_base64 = base64.b64encode(output_buffer.getvalue()).decode('utf-8')
+        # --- Загрузка результата в MinIO ---
+        # Определяем bucket и папку из исходного файла
+        bucket, src_object = request.train_minio_file_id.split('/', 1)
+        src_dir = os.path.dirname(src_object)
         
-        logging.info(f"[train_predict_base64] Успешно завершено для session_id={session_id}")
+        pred_filename = f"prediction_with_metadata_{session_id}.xlsx"
+        pred_object = f"{src_dir}/{pred_filename}" if src_dir else pred_filename
+        
+        content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        
+        upload_file_to_minio(
+            file_bytes=output_buffer.getvalue(),
+            bucket=bucket,
+            object_name=pred_object,
+            content_type=content_type
+        )
+        
+        # Формируем ответ
+        result_file_id = f"{bucket}/{pred_object}"
+        
+        logging.info(f"[train_predict_base64] Успешно завершено. Результат загружен в {result_file_id}")
         
         return TrainPredictResponse(
-            files=[{
-                "name": f"prediction_{session_id}.xlsx",
-                "content": prediction_base64
-            }],
+            files=[FileResponse(
+                fileId=result_file_id,
+                fileName=pred_filename,
+                mimeType=content_type
+            )],
             session_id=session_id
         )
         
@@ -152,7 +241,7 @@ async def train_predict_base64(request: TrainPredictRequest):
 def create_excel_with_metadata(prediction_df: pd.DataFrame, session_id: str) -> io.BytesIO:
     """
     Создаёт Excel файл с прогнозом и метаинформацией (leaderboard, параметры обучения, feature importance).
-    Аналогично функции download_prediction_file из prediction/router.py
+    Эта функция остается без изменений, т.к. ее логика не зависит от источника/приемника данных.
     """
     session_path = training_sessions[session_id]["session_path"]
     leaderboard_path = os.path.join(session_path, "leaderboard.csv")
@@ -165,7 +254,6 @@ def create_excel_with_metadata(prediction_df: pd.DataFrame, session_id: str) -> 
             df_leaderboard = pd.read_csv(leaderboard_path)
         except Exception as e:
             logging.warning(f"Не удалось прочитать leaderboard: {e}")
-            df_leaderboard = None
 
     # Читаем параметры обучения
     params_dict = None
@@ -176,18 +264,16 @@ def create_excel_with_metadata(prediction_df: pd.DataFrame, session_id: str) -> 
             params_dict = metadata.get("training_parameters", {})
         except Exception as e:
             logging.warning(f"Не удалось прочитать параметры обучения: {e}")
-            params_dict = None
 
     # Формируем новый Excel-файл с несколькими листами
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        # Первый лист — прогноз
+        # Лист 1: Прогноз
         prediction_df.to_excel(writer, sheet_name="Prediction", index=False)
         
-        # Второй лист — leaderboard
+        # Лист 2: Leaderboard
         if df_leaderboard is not None:
             df_leaderboard.to_excel(writer, sheet_name="Leaderboard", index=False)
-            # Всегда выделяем строку с максимальным score_val зелёным цветом
             try:
                 ws = writer.sheets["Leaderboard"]
                 if "score_val" in df_leaderboard.columns:
@@ -200,38 +286,32 @@ def create_excel_with_metadata(prediction_df: pd.DataFrame, session_id: str) -> 
         else:
             pd.DataFrame({"info": ["Leaderboard not found"]}).to_excel(writer, sheet_name="Leaderboard", index=False)
         
-        # Третий лист — параметры обучения
+        # Лист 3: Параметры обучения
         if params_dict is not None:
             pd.DataFrame(list(params_dict.items()), columns=["Parameter", "Value"]).to_excel(writer, sheet_name="TrainingParams", index=False)
         else:
             pd.DataFrame({"info": ["Training parameters not found"]}).to_excel(writer, sheet_name="TrainingParams", index=False)
         
-        # Четвёртый лист — feature_importance
+        # Лист 4: Feature Importance
         fi_path = os.path.join(session_path, "autogluon", "feature_importance.csv")
         feature_importance = None
         if os.path.exists(fi_path):
             try:
                 feature_importance = pd.read_csv(fi_path).to_dict(orient="records")
-                logging.info(f"Feature importance добавлен для session_id={session_id}")
             except Exception as e:
                 logging.warning(f"Не удалось прочитать feature importance: {e}")
         
-        if feature_importance and isinstance(feature_importance, list) and len(feature_importance) > 0:
-            try:
-                df_fi = pd.DataFrame(feature_importance)
-                df_fi.to_excel(writer, sheet_name="FeatureImportance", index=False)
-            except Exception as e:
-                pd.DataFrame({"info": [f"Feature importance error: {e}"]}).to_excel(writer, sheet_name="FeatureImportance", index=False)
+        if feature_importance:
+            pd.DataFrame(feature_importance).to_excel(writer, sheet_name="FeatureImportance", index=False)
         else:
             pd.DataFrame({"info": ["Feature importance not found"]}).to_excel(writer, sheet_name="FeatureImportance", index=False)
         
-        # Пятый лист — WeightedEnsemble
+        # Лист 5: WeightedEnsemble
         weighted_ensemble_path = os.path.join(session_path, "autogluon", "model_metadata.json")
         if os.path.exists(weighted_ensemble_path):
             try:
                 with open(weighted_ensemble_path, "r", encoding="utf-8") as f:
                     model_metadata = json.load(f)
-                # Только WeightedEnsemble_L1_weights и WeightedEnsemble_L2_weights
                 ensemble_keys = [k for k in ("WeightedEnsemble_L1_weights", "WeightedEnsemble_L2_weights") if k in model_metadata]
                 if ensemble_keys:
                     ws = writer.book.add_worksheet("WeightedEnsemble")
@@ -241,8 +321,7 @@ def create_excel_with_metadata(prediction_df: pd.DataFrame, session_id: str) -> 
                         row += 1
                         weights = model_metadata[key]
                         if isinstance(weights, dict):
-                            ws.write(row, 0, "Model")
-                            ws.write(row, 1, "Weight")
+                            ws.write_row(row, 0, ["Model", "Weight"])
                             row += 1
                             for model, weight in weights.items():
                                 ws.write(row, 0, f"  {model}")
@@ -251,8 +330,7 @@ def create_excel_with_metadata(prediction_df: pd.DataFrame, session_id: str) -> 
                         else:
                             ws.write(row, 0, "(weights not found or not a dict)")
                             row += 1
-                        ws.write(row, 0, "")
-                        row += 1
+                        row += 1 # Пустая строка для разделения
             except Exception as e:
                 logging.warning(f"Не удалось добавить WeightedEnsemble: {e}")
     

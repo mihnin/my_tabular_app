@@ -104,24 +104,31 @@ export default function ModelConfig() {
   // --- AutoGluon модели только из agModels ---
   const agModels = [
     { id: '*', label: 'Все модели', description: 'Использовать все доступные AutoGluon модели' },
+    { id: 'RF', label: 'Random Forest', description: 'Random Forest' },
+    { id: 'XT', label: 'Extra Trees', description: 'Extra Trees' },
+    { id: 'KNN', label: 'K-Nearest Neighbors', description: 'K-Nearest Neighbors' },
+    { id: 'GBM', label: 'LightGBM (GBM)', description: 'LightGBM (GBM)' },
     { id: 'CAT', label: 'CatBoost', description: 'CatBoost' },
-    { id: 'GBM', label: 'LightGBM', description: 'LightGBM' },
-    { id: 'RF', label: 'RandomForestGini', description: 'RandomForestGini' },
-    { id: 'XT', label: 'ExtraTreesGini', description: 'ExtraTreesGini' },
     { id: 'XGB', label: 'XGBoost', description: 'XGBoost' },
-    { id: 'FASTAI', label: 'NeuralNetFastAI', description: 'NeuralNetFastAI' },
-    { id: 'NN_TORCH', label: 'PyTorchNN', description: 'PyTorchNN' },
-    { id: 'LR', label: 'Linear scikit', description: 'Linear scikit' },
-    { id: 'KNN', label: 'KNearestNeighbors', description: 'KNearestNeighbors' }
+    { id: 'REALMLP', label: 'RealMLP', description: 'RealMLP' },
+    { id: 'MITRA', label: 'Mitra', description: 'Mitra' },
+    { id: 'TABICL', label: 'TabICL', description: 'TabICL' },
+    { id: 'TABPFNV2', label: 'TabPFN v2', description: 'TabPFN v2' },
+    { id: 'NN_TORCH', label: 'Tabular Neural Net (Torch)', description: 'Tabular Neural Net (Torch)' },
+    { id: 'LR', label: 'Linear Model', description: 'Linear Model' },
+    { id: 'FASTAI', label: 'FastAI NN', description: 'FastAI NN' },
+    { id: 'TABM', label: 'TabM', description: 'TabM' },
+    { id: 'FT_TRANSFORMER', label: 'FT-Transformer', description: 'FT-Transformer' }
   ]
 
   const presetsList = [
-    { id: 'medium_quality', label: 'medium_quality', description: '' },
-    { id: 'high_quality', label: 'high_quality', description: '' },
+    { id: 'extreme_quality', label: 'extreme_quality', description: '' },
     { id: 'best_quality', label: 'best_quality', description: '' },
+    { id: 'high_quality', label: 'high_quality', description: '' },
     { id: 'good_quality', label: 'good_quality', description: '' },
-    { id: 'optimize_for_deployment', label: 'optimize_for_deployment', description: '' },
-    { id: 'experimental', label: 'experimental', description: '' }
+    { id: 'medium_quality', label: 'medium_quality', description: '' },
+    { id: 'experimental_quality', label: 'experimental_quality', description: '' },
+    { id: 'optimize_for_deployment', label: 'optimize_for_deployment', description: '' }
   ]
 
   const handleConfigChange = (field, value) => {

@@ -34,14 +34,20 @@ class AutoGluonStrategy(AutoMLStrategy):
         models_to_train = getattr(training_params, 'models_to_train', None)
 
         # Готовим hyperparameters
-        if (
-            not models_to_train or
-            (isinstance(models_to_train, list) and (len(models_to_train) == 0 or '*' in models_to_train or 'all' in models_to_train)) or
-            (isinstance(models_to_train, str) and models_to_train.strip() in ('*', 'all'))
-        ):
-            hyperparams = None  # обучать все модели
+        # Если выбран экстремальный пресет — не передаём гиперпараметры вовсе,
+        # чтобы AutoGluon использовал свои внутренние настройки для "extreme" режима.
+        if isinstance(presets, str) and 'extreme' in presets.lower():
+            logging.info("[AutoGluonStrategy] 'extreme' preset detected — hyperparameters will not be passed to fit()")
+            hyperparams = None
         else:
-            hyperparams = {m: {} for m in models_to_train}
+            if (
+                not models_to_train or
+                (isinstance(models_to_train, list) and (len(models_to_train) == 0 or '*' in models_to_train or 'all' in models_to_train)) or
+                (isinstance(models_to_train, str) and models_to_train.strip() in ('*', 'all'))
+            ):
+                hyperparams = None  # обучать все модели
+            else:
+                hyperparams = {m: {} for m in models_to_train}
 
         autogluon_train_semaphore.acquire()
         try:

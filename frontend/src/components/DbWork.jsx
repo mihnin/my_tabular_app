@@ -264,14 +264,8 @@ export default function DbWork() {
   const extractColumnsFromExcel = async(file) => {
     if (!file) return [];
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-      if (rows.length > 0) {
-        return rows[0].map(h=>h?.toString().trim());
-      }
+      const { extractColumnsFromExcel: extractCols } = await import('../utils/excelUtils.js');
+      return await extractCols(file);
     }catch(e){ console.error(e); }
     return [];
   };
