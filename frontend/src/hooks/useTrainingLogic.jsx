@@ -403,11 +403,8 @@ export function useTrainingLogic({
         if (["completed", "complete"].includes(status.status)) {
           try {
             const blob = await downloadPredictionWithRetry(sessionId);
-            const arrayBuffer = await blob.arrayBuffer();
-            const XLSX = await import('xlsx');
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            const { readExcelFile } = await import('../utils/excelUtils.js');
+            const rows = await readExcelFile(blob);
             if (rows.length > 1) {
               const headers = rows[0];
               // Фильтруем технические колонки 0.1-0.9

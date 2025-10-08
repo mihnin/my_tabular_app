@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label.jsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
 import { CheckCircle, Database, Settings, ChevronDown, ChevronUp, Download, Clock } from 'lucide-react'
 import { API_BASE_URL } from '../apiConfig.js'
-import * as XLSX from 'xlsx';
 
 export default function Export() {
   const { sessionId, authToken, predictionRows, setPredictionRows, trainingStatus, setAuthToken, dbConnected, setDbConnected, dbTables, setDbTables, dbTablesLoading, setDbTablesLoading, dbError, setDbError, ensureTablesLoaded, refreshTables } = useData();
